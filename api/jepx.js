@@ -5,8 +5,20 @@
 //   /api/jepx?market=spot&probe=1   その市場の試行ログのみ JSON (CSV は返さない)
 //   /api/jepx?diag=1                全 5 市場の試行結果を 1 つの JSON で
 //   /api/jepx?url=<jepx-url>        URL を明示指定して中継
+//
+// 失敗時のフォールバック:
+//   LIVE 取得が全滅したら GitHub Pages 経由のスナップショット
+//   (raw.githubusercontent.com/marron1984/jpex/<branch>/data/<market>.csv) を返す。
+//   X-Source: github-snapshot, X-Snapshot-Age-Seconds: ... を付ける。
+//   GitHub Actions の cron (.github/workflows/scrape-jepx.yml) が 30 分おきに
+//   data/*.csv を更新する。
 
 export const config = { runtime: 'edge' };
+
+// スナップショット取得元 (CI が更新するブランチ)
+const SNAPSHOT_REPO   = 'marron1984/jpex';
+const SNAPSHOT_BRANCH = 'claude/japan-power-market-display-6Nk9g';
+const SNAPSHOT_BASE   = `https://raw.githubusercontent.com/${SNAPSHOT_REPO}/${SNAPSHOT_BRANCH}/data`;
 
 const ALLOWED = /^https?:\/\/(www\.)?jepx\.(jp|org)\//i;
 
@@ -199,12 +211,18 @@ export default async function handler(req) {
   // ─── ?diag=1: 全市場を probe ──────────────────────────────
   if (diag) {
     const markets = Object.keys(URL_PATTERNS);
-    const results = await Promise.all(markets.map(async (m) => {
-      const out = await probeMarket(m, true);  // headOnly=true で軽量
-      return [m, { result: out.result, url: out.url || null, via: out.via || null, tried: out.tried, scrapedLinks: out.scrapedLinks?.slice(0, 20) || [] }];
-    }));
-    const obj = Object.fromEntries(results);
-    return jsonResponse({ now: new Date().toISOString(), markets: obj });
+    const [marketResults, snapshotMeta] = await Promise.all([
+      Promise.all(markets.map(async (m) => {
+        const out = await probeMarket(m, true);  // headOnly=true で軽量
+        return [m, { result: out.result, url: out.url || null, via: out.via || null, tried: out.tried, scrapedLinks: out.scrapedLinks?.slice(0, 20) || [] }];
+      })),
+      fetchSnapshotMeta(),
+    ]);
+    return jsonResponse({
+      now: new Date().toISOString(),
+      markets: Object.fromEntries(marketResults),
+      snapshot: snapshotMeta,
+    });
   }
 
   // ─── ?probe=1&market=X: 単一市場を probe ──────────────────
@@ -223,19 +241,41 @@ export default async function handler(req) {
           'Content-Type': out.contentType,
           'Cache-Control': 'public, s-maxage=300, stale-while-revalidate=60',
           'Access-Control-Allow-Origin': '*',
-          'Access-Control-Expose-Headers': 'X-Source-Url, X-Via, X-Tried',
+          'Access-Control-Expose-Headers': 'X-Source-Url, X-Via, X-Tried, X-Source, X-Snapshot-Age-Seconds, X-Snapshot-At',
           'X-Source-Url': out.url,
           'X-Via': out.via,
           'X-Tried': String(out.tried.length),
+          'X-Source': 'live',
         },
       });
     }
-    // 失敗時は構造化 JSON を返す (フロントが診断パネルに使う)
+    // LIVE 取得が全滅した場合: GitHub Pages 上のスナップショットへフォールバック
+    const snap = await trySnapshot(market);
+    if (snap.ok) {
+      return new Response(snap.buf, {
+        status: 200,
+        headers: {
+          'Content-Type': snap.contentType,
+          // スナップショットは古い可能性があるので CDN キャッシュは短め
+          'Cache-Control': 'public, s-maxage=120, stale-while-revalidate=300',
+          'Access-Control-Allow-Origin': '*',
+          'Access-Control-Expose-Headers': 'X-Source-Url, X-Via, X-Tried, X-Source, X-Snapshot-Age-Seconds, X-Snapshot-At',
+          'X-Source-Url': snap.sourceUrl,
+          'X-Via': 'github-snapshot',
+          'X-Tried': String(out.tried.length),
+          'X-Source': 'github-snapshot',
+          'X-Snapshot-Age-Seconds': String(snap.ageSec ?? 0),
+          'X-Snapshot-At': snap.snapshotAt || '',
+        },
+      });
+    }
+    // 全部ダメ: 構造化 JSON でフロントの診断パネルへ
     return jsonResponse({
       error: 'no working URL',
       market,
       tried: out.tried,
       scrapedLinks: (out.scrapedLinks || []).slice(0, 20),
+      snapshot: { tried: snap.attempted || [], reason: snap.reason || null },
     }, 502);
   }
 
@@ -265,6 +305,58 @@ export default async function handler(req) {
       'explicit url': '/api/jepx?url=https://www.jepx.jp/market/excel/spot_2026.csv',
     },
   });
+}
+
+// _meta.json を取りに行って updatedAt とエージェント情報を返す。診断用。
+async function fetchSnapshotMeta() {
+  const url = `${SNAPSHOT_BASE}/_meta.json`;
+  try {
+    const r = await fetch(url, { redirect: 'follow', signal: AbortSignal.timeout(6000), headers: { 'Accept': 'application/json' } });
+    if (!r.ok) return { available: false, status: r.status, url };
+    const meta = await r.json();
+    const ageSec = meta.updatedAt ? Math.floor((Date.now() - new Date(meta.updatedAt).getTime()) / 1000) : null;
+    return { available: true, url, ageSec, ...meta };
+  } catch (e) {
+    return { available: false, url, reason: e?.message || String(e) };
+  }
+}
+
+// ─── GitHub スナップショットフォールバック ──────────────────
+//
+// CI (.github/workflows/scrape-jepx.yml) が data/<market>.csv と
+// data/_meta.json を 30 分おきに更新する。LIVE が全滅したらここを取りに行く。
+async function trySnapshot(market) {
+  const csvUrl  = `${SNAPSHOT_BASE}/${market}.csv`;
+  const metaUrl = `${SNAPSHOT_BASE}/_meta.json`;
+  const attempted = [csvUrl, metaUrl];
+  try {
+    const [csvR, metaR] = await Promise.all([
+      fetch(csvUrl,  { redirect: 'follow', signal: AbortSignal.timeout(8000), headers: { 'Accept': 'text/csv,*/*' } }),
+      fetch(metaUrl, { redirect: 'follow', signal: AbortSignal.timeout(6000), headers: { 'Accept': 'application/json' } }),
+    ]);
+    if (!csvR.ok) return { ok: false, attempted, reason: `snapshot HTTP ${csvR.status}` };
+    const buf = await csvR.arrayBuffer();
+    if (buf.byteLength < 64) return { ok: false, attempted, reason: 'snapshot too small' };
+
+    let snapshotAt = null, ageSec = null;
+    if (metaR.ok) {
+      try {
+        const meta = await metaR.json();
+        snapshotAt = meta.updatedAt || null;
+        if (snapshotAt) ageSec = Math.floor((Date.now() - new Date(snapshotAt).getTime()) / 1000);
+      } catch {}
+    }
+    return {
+      ok: true,
+      buf,
+      contentType: csvR.headers.get('content-type') || 'text/csv',
+      sourceUrl: csvUrl,
+      snapshotAt,
+      ageSec,
+    };
+  } catch (e) {
+    return { ok: false, attempted, reason: e?.message || String(e) };
+  }
 }
 
 function jsonResponse(obj, status = 200) {

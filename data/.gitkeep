@@ -1,0 +1,2 @@
+# JEPX scrape スナップショット置き場 (CI が自動更新)
+# 詳細: .github/workflows/scrape-jepx.yml + scripts/scrape-jepx.mjs

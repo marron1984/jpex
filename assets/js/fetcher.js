@@ -8,7 +8,7 @@
 //   3) 直 fetch                  ─ JEPX が CORS 許可した時用 (普通は失敗)
 //   4) corsproxy.io / allorigins ─ パブリックフォールバック
 
-import { CORS_PROXIES } from './config.js?v=2026.04.30.10';
+import { CORS_PROXIES } from './config.js?v=2026.04.30.11';
 
 async function tryFetch(url, signal) {
   const res = await fetch(url, {
