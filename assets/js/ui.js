@@ -1,6 +1,6 @@
 // 描画レイヤ。Chart.js + DOM 操作。
 
-import { AREAS, SLOT_LABELS } from './config.js?v=2026.04.30.18';
+import { AREAS, SLOT_LABELS } from './config.js?v=2026.04.30.19';
 
 // ───── ユーティリティ ──────────────────────────────────────────────
 
