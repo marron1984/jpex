@@ -31,7 +31,7 @@
       },
     };
   </script>
-  <link rel="stylesheet" href="assets/css/styles.css?v=2026.04.30.16" />
+  <link rel="stylesheet" href="assets/css/styles.css?v=2026.04.30.17" />
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
 </head>
 <body class="bg-ink-950 text-slate-100 min-h-screen antialiased">
@@ -45,8 +45,8 @@
     </div>
   </div>
 
-  <header class="relative z-10 px-6 lg:px-10 pt-6 pb-4">
-    <div class="max-w-[1600px] mx-auto flex flex-wrap items-center gap-4">
+  <header class="relative z-10 px-4 lg:px-6 xl:px-8 pt-3 lg:pt-4 pb-2 lg:pb-3">
+    <div class="max-w-[1800px] mx-auto flex flex-wrap items-center gap-3">
       <div class="flex items-center gap-3">
         <img src="assets/logo.png" alt="DENDEN電力" class="brand-logo" />
         <div>
@@ -88,8 +88,8 @@
     </div>
   </header>
 
-  <main class="relative z-10 px-4 lg:px-6 xl:px-8 pb-16">
-    <div class="max-w-[1800px] mx-auto space-y-4 lg:space-y-5">
+  <main class="relative z-10 px-4 lg:px-6 xl:px-8 pb-8">
+    <div class="max-w-[1800px] mx-auto space-y-3 lg:space-y-3">
 
       <!-- KANSAI HERO (day-trading focus card) -->
       <section id="hero" class="hero card">
@@ -190,7 +190,7 @@
       </section>
 
       <!-- PLANT + REVENUE: xl 以上で横並び、それ未満では縦積み -->
-      <div class="grid grid-cols-1 2xl:grid-cols-2 gap-4 lg:gap-5">
+      <div class="grid grid-cols-1 2xl:grid-cols-2 gap-3">
 
       <!-- PLANT (DEMO): 奈良吉野太陽光発電所 -->
       <section id="plant" class="card plant-card">
@@ -388,7 +388,7 @@
             </div>
           </div>
         </div>
-        <div class="relative h-[340px] md:h-[400px] px-2">
+        <div class="relative h-[240px] md:h-[280px] xl:h-[260px] px-2">
           <canvas id="spot-chart"></canvas>
         </div>
         <div class="grid grid-cols-3 md:grid-cols-9 gap-2 px-2 pb-2 pt-3" id="area-prices">
@@ -397,7 +397,7 @@
       </section>
 
       <!-- INTRADAY + PROFILE + FORWARD + BASELOAD (xl で 4 列に圧縮) -->
-      <section class="grid grid-cols-1 lg:grid-cols-3 xl:grid-cols-4 gap-4 lg:gap-5">
+      <section class="grid grid-cols-1 lg:grid-cols-3 xl:grid-cols-4 gap-3">
         <div class="card lg:col-span-2 xl:col-span-2">
           <div class="card-head">
             <div>
@@ -408,7 +408,7 @@
               <span class="badge badge-volt" id="intraday-latest">—</span>
             </div>
           </div>
-          <div class="relative h-[260px] md:h-[300px] px-2">
+          <div class="relative h-[200px] md:h-[220px] xl:h-[200px] px-2">
             <canvas id="intraday-chart"></canvas>
           </div>
         </div>
@@ -426,7 +426,7 @@
         </div>
 
         <!-- Forward + Baseload を 1 列に縦スタック (xl) / 2 列 (lg) / 1 列 (mobile) -->
-        <div class="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-1 gap-4 lg:gap-5 lg:col-span-3 xl:col-span-1">
+        <div class="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-1 gap-3 lg:col-span-3 xl:col-span-1">
           <div class="card">
             <div class="card-head">
               <div>
@@ -477,7 +477,7 @@
             <p class="card-meta" id="fip-meta">—</p>
           </div>
         </div>
-        <div class="relative h-[260px] md:h-[300px] px-2">
+        <div class="relative h-[200px] md:h-[220px] px-2">
           <canvas id="fip-chart"></canvas>
         </div>
         <div class="grid grid-cols-3 md:grid-cols-9 gap-2 px-2 pb-3 pt-3" id="fip-areas">
@@ -494,6 +494,6 @@
     </div>
   </main>
 
-  <script type="module" src="assets/js/app.js?v=2026.04.30.16"></script>
+  <script type="module" src="assets/js/app.js?v=2026.04.30.17"></script>
 </body>
 </html>

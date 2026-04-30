@@ -2,7 +2,7 @@
 // JEPX のヘッダは年度や市場で揺れがあるため、ヘッダ名を「キーワード一致」で
 // マッピングする方式を採用 (例: "東京" を含む列 → tokyo)。
 
-import { num } from './csv.js?v=2026.04.30.16';
+import { num } from './csv.js?v=2026.04.30.17';
 
 const AREA_KEYWORDS = {
   hokkaido: ['北海道'],
