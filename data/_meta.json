@@ -1,41 +1,41 @@
 {
-  "updatedAt": "2026-04-30T07:10:52.536Z",
+  "updatedAt": "2026-04-30T08:03:10.505Z",
   "runner": "github-actions",
   "markets": {
     "spot": {
       "ok": true,
       "url": "https://www.jepx.jp/market/excel/spot_2026.csv",
       "via": "pattern",
-      "bytes": 376563,
+      "bytes": 376666,
       "attempts": 1
     },
     "intraday": {
       "ok": true,
       "url": "https://www.jepx.jp/market/excel/im_trade_summary_2026.csv",
       "via": "pattern",
-      "bytes": 76361,
+      "bytes": 76416,
       "attempts": 3
     },
     "forward": {
-      "ok": false,
-      "attempts": 5,
-      "lastError": "status 404",
-      "keptPrevious": false,
-      "previousAt": null
+      "ok": true,
+      "url": "http://www.jepx.org/market/excel/forward_2026.csv",
+      "via": "pattern",
+      "bytes": 9661,
+      "attempts": 14
     },
     "baseload": {
-      "ok": false,
-      "attempts": 5,
-      "lastError": "status 404",
-      "keptPrevious": false,
-      "previousAt": null
+      "ok": true,
+      "url": "http://www.jepx.org/market/excel/baseload_2026.csv",
+      "via": "pattern",
+      "bytes": 9661,
+      "attempts": 10
     },
     "fip": {
-      "ok": false,
-      "attempts": 5,
-      "lastError": "status 404",
-      "keptPrevious": false,
-      "previousAt": null
+      "ok": true,
+      "url": "http://www.jepx.org/market/excel/fip_2026.csv",
+      "via": "pattern",
+      "bytes": 9661,
+      "attempts": 20
     }
   }
 }

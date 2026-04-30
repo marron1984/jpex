@@ -1,0 +1,302 @@
+<!doctype html>
+<html class="no-js" lang="ja">
+
+<head>
+  <meta charset="utf-8">
+  <title>JEPX</title>
+  <meta name="description" content="一般社団法人 日本卸電力取引所は、我が国で唯一の卸電力取引市場を開設・運営する取引所です。">
+  <meta name="keywords" content="JEPX,Japan Electric Power Exchange,一般社団法人,日本卸電力取引所" />
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="icon" type="image/x-icon" href="/img/favicon.ico">
+
+  <link rel="stylesheet" href="css/normalize.css">
+  <link rel="stylesheet" href="css/swiper-bundle.min.css">
+  <link rel="stylesheet" href="css/common.css">
+  <link rel="stylesheet" href="css/top.css">
+
+  <meta name="theme-color" content="#FFFFFF">
+
+</head>
+
+<body class="preload-transitions">
+  <div id="wrapper">
+    
+    <header id="header">
+  <a href="/" class="logo-container">
+    <img src="/img/common/logo.png" width="128" alt="JEPX: Japan Electric Power eXchange" class="logo">
+    <div class="right-txt">
+      <span class="small-txt">一般社団法人</span>
+      日本卸電力取引所
+    </div>
+  </a>
+  <nav class="pc-main-nav pc_only">
+    <ul>
+      <li class="submenu-li">
+        <a class="has-submenu ">電力取引</a>
+        <ul class="sub-nav">
+          <li>
+            <a href="/electricpower/news/">取引に関するお知らせ</a>
+          </li>
+          <li>
+            <a href="/electricpower/market-data/spot/">市場情報</a>
+          </li>
+          <li>
+            <a href="/electricpower/reports/ ">市場監視情報</a>
+          </li>
+          <li>
+            <a href="/electricpower/outline/ ">取引概要</a>
+          </li>
+          <li>
+            <a href="/electricpower/membership/ ">取引会員情報</a>
+          </li>
+          <li>
+            <a href="/electricpower/documents/ ">各種お手続</a>
+          </li>
+        </ul>
+      </li>
+      <li class="submenu-li">
+        <a class="has-submenu ">非化石価値取引</a>
+        <ul class="sub-nav">
+          <li>
+            <a href="/nonfossil/news/">取引に関するお知らせ</a>
+          </li>
+          <li>
+            <a href="/nonfossil/market-data/">市場情報</a>
+          </li>
+          <li>
+            <a href="/nonfossil/outline/">取引概要</a>
+          </li>
+          <li>
+            <a href="/nonfossil/membership/">取引会員情報</a>
+          </li>
+          <li>
+            <a href="/nonfossil/documents/">各種お手続</a>
+          </li>
+        </ul>
+      </li>
+      <li class="submenu-li">
+        <a class="has-submenu ">システム接続</a>
+        <ul class="sub-nav">
+          <li>
+            <a href="/system/news/">お知らせ</a>
+          </li>
+          <li>
+            <a href="/system/documents/ ">各種お手続</a>
+          </li>
+          <li>
+            <a href="/system/provider/ ">取引システム提供事業者のご紹介</a>
+          </li>
+        </ul>
+      </li>
+      <li class="submenu-li">
+        <a class="has-submenu ">企業情報</a>
+        <ul class="sub-nav">
+          <li>
+            <a href="/company/news/">お知らせ</a>
+          </li>
+          <li>
+            <a href="/company/overview/">会社概要</a>
+          </li>
+          <li>
+            <a href="/company/access/">アクセス</a>
+          </li>
+          <li>
+            <a href="/company/history/">沿革</a>
+          </li>
+          <li>
+            <a href="/company/organization/">組織</a>
+          </li>
+          <li>
+            <a href="/company/regulations/">法人運営に関する規程</a>
+          </li>
+          <li>
+            <a href="/company/conference/">各種会議</a>
+          </li>
+        </ul>
+      </li>
+      <li>
+        <a href="/contact/" class="">お問い合わせ</a>
+      </li>
+    </ul>
+  </nav>
+  <a href="/en/" class="lang-select pc_only">
+    <img src="/img/common/ico-globe.png" width="28" alt="Language" class="ico-globe">
+    <span class="lang-txt">English</span>
+  </a>
+  <a href="" class="sp-menu-btn sp_only">
+    <div class="line1"></div>
+    <div class="line2"></div>
+  </a>
+</header>
+<div id="sp-menu" class="sp_only">
+  <div class="scroll-inner">
+    <a href="/en/" class="lang-select">
+      <img src="/img/common/ico-globe.png" width="28" alt="Language" class="ico-globe">
+      <span class="lang-txt">English</span>
+    </a>
+    <nav class="sp-nav">
+      <h4 class="nav-ttl">電力取引</h4>
+      <ul class="nav-list">
+        <li>
+          <a href="/electricpower/news/">取引に関するお知らせ</a>
+        </li>
+        <li>
+          <a href="/electricpower/market-data/spot/">市場情報</a>
+        </li>
+        <li>
+          <a href="/electricpower/reports/ ">市場監視情報</a>
+        </li>
+        <li>
+          <a href="/electricpower/outline/ ">取引概要</a>
+        </li>
+        <li>
+          <a href="/electricpower/membership/ ">取引会員情報</a>
+        </li>
+        <li>
+          <a href="/electricpower/documents/ ">各種お手続</a>
+        </li>
+      </ul>
+      <h4 class="nav-ttl">非化石価値取引</h4>
+      <ul class="nav-list">
+        <li>
+          <a href="/nonfossil/news/">取引に関するお知らせ</a>
+        </li>
+        <li>
+          <a href="/nonfossil/market-data/">市場情報</a>
+        </li>
+        <li>
+          <a href="/nonfossil/outline/">取引概要</a>
+        </li>
+        <li>
+          <a href="/nonfossil/membership/">取引会員情報</a>
+        </li>
+        <li>
+          <a href="/nonfossil/documents/">各種お手続</a>
+        </li>
+      </ul>
+      <h4 class="nav-ttl">システム接続</h4>
+      <ul class="nav-list">
+        <li>
+          <a href="/system/news/">お知らせ</a>
+        </li>
+        <li>
+          <a href="/system/documents/">各種お手続</a>
+        </li>
+        <li>
+          <a href="/system/provider/">取引システム提供事業者のご紹介</a>
+        </li>
+      </ul>
+      <h4 class="nav-ttl">企業情報</h4>
+      <ul class="nav-list">
+        <li>
+          <a href="/company/news/">お知らせ</a>
+        </li>
+        <li>
+          <a href="/company/overview/">会社概要</a>
+        </li>
+        <li>
+          <a href="/company/access/">アクセス</a>
+        </li>
+        <li>
+          <a href="/company/history/">沿革</a>
+        </li>
+        <li>
+          <a href="/company/organization/">組織</a>
+        </li>
+        <li>
+          <a href="/company/regulations/">法人運営に関する規程</a>
+        </li>
+        <li>
+          <a href="/company/conference/">各種会議</a>
+        </li>
+      </ul>
+    </nav>
+    <a href="/contact/" class="contact-btn">お問い合わせ</a>
+  </div>
+</div>
+
+    <div class="background-container">
+    </div>
+
+    <div class="background-swiper">
+      <div class="swiper-wrapper">
+      </div>
+    </div>
+
+    <main class="main-contents top-main">
+
+      <div class="main-inner">
+        <div class="center-container">
+          <h1 class="kv-ttl">
+            <img src="img/top/kv-ttl-1.png" width="889" alt="日本卸電力取引所" class="kv-ttl-1">
+            <span class="kv-ttl-2">Japan Electric Power eXchange</span>
+            <img src="img/top/kv-ttl-3.png" width="64" alt="X" class="kv-ttl-3">
+            <img src="img/top/kv-ttl-4.png" width="953" alt="これからも日本の電力取引を支え続けます。" class="kv-ttl-4">
+          </h1>
+        </div>
+
+        <section class="index-section">
+          <h3 class="index-ttl">
+            スポット市場 インデックス <span id="index-date" class="date"></span>
+          </h3>
+          <div class="index-flex">
+            <div class="index-item">
+              <h4 class="item-ttl">
+                DA-24
+                <span class="subttl">Day Ahead 24 hours</span>
+              </h4>
+							<p id="da-24" class="index-amount"></p>
+            </div>
+            <div class="index-item">
+              <h4 class="item-ttl">
+                DA-DT
+                <span class="subttl">Day Ahead Day Time (8:00-22:00)</span>
+              </h4>
+              <p id="da-dt" class="index-amount"></p>
+            </div>
+            <div class="index-item">
+              <h4 class="item-ttl">
+                DA-PT
+                <span class="subttl">Day Ahead Peak Time (13:00-16:00)</span>
+              </h4>
+               <p id="da-pt" class="index-amount"></p>
+            </div>
+            <div class="index-item">
+              <h4 class="item-ttl">
+                TTV
+                <span class="subttl">Total Transaction Volume</span>
+              </h4>
+              <p id="ttv" class="index-amount"></p>
+            </div>
+          </div>
+        </section>
+
+        <section class="news-container">
+          <h3 class="news-ttl">お知らせ</h3>
+          <div id="news-swiper" class="news-swiper">
+            <div class="swiper-wrapper"></div>
+          </div>
+          <div class="swiper-nav">
+            <div class="news-prev-btn"></div>
+            <div class="news-next-btn"></div>
+          </div>
+          <a href="company/news/" class="view-more-btn">一覧へ</a>
+        </section>
+      </div>
+
+      <a href="disclaimer/" class="disclaimer-link">免責事項・著作権</a>
+      <span class="copyright-txt">&#169;Japan Electric Power Exchange</span>
+
+
+    </main>
+
+  </div>
+  <script src="js/jquery-3.6.0.min.js"></script>
+  <script src="js/jquery-migrate.js"></script>
+  <script src="js/swiper-bundle.min.js"></script>
+  <script src="js/script.js"></script>
+  <script src="js/top.js"></script>
+
+</body>
+
+</html>
