@@ -1,6 +1,6 @@
 // 描画レイヤ。Chart.js + DOM 操作。
 
-import { AREAS, SLOT_LABELS } from './config.js?v=2026.04.30.13';
+import { AREAS, SLOT_LABELS } from './config.js?v=2026.04.30.14';
 
 // ───── ユーティリティ ──────────────────────────────────────────────
 
@@ -511,12 +511,12 @@ export function setSnapshotInfo(info) {
   }
 }
 
-// 3-state status badge: 'live' | 'connecting' | 'partial' | 'demo'
+// 3-state status badge: 'live' | 'connecting' | 'partial'
+// (demo 状態は cron スナップショットでほぼ恒常的に LIVE / PARTIAL に到達するため廃止)
 const MODE_STYLES = {
   live:       { cls: 'mode-live',       label: 'LIVE',       meta: '本番データ' },
   connecting: { cls: 'mode-connecting', label: 'CONNECTING', meta: 'JEPX 接続中…' },
   partial:    { cls: 'mode-partial',    label: 'PARTIAL',    meta: '一部接続失敗' },
-  demo:       { cls: 'mode-demo',       label: 'DEMO',       meta: 'デモデータ' },
 };
 export function setMode(state, meta) {
   const badge = document.getElementById('mode-badge');

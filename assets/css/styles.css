@@ -253,13 +253,6 @@ canvas { cursor: crosshair; }
 }
 .mode-partial .dot { background: #facc15; animation: live-blink 1.5s ease-in-out infinite; }
 
-.mode-demo {
-  background: rgba(244, 63, 94, 0.14);
-  color: #fb7185;
-  box-shadow: inset 0 0 0 1px rgba(244, 63, 94, 0.45);
-}
-.mode-demo .dot { background: #f43f5e; animation: live-blink 1s ease-in-out infinite; }
-
 /* ───── Icon buttons (refresh / fullscreen) ────────────────── */
 .icon-btn {
   width: 32px; height: 32px;
