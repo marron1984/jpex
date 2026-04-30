@@ -1,17 +1,17 @@
 // JEPX Live — エントリーポイント
 
-import { REFRESH_MS, SOURCES, AREAS, fiscalYear } from './config.js?v=2026.04.30.3';
-import { fetchCsv } from './fetcher.js?v=2026.04.30.3';
-import { parseCsvWithHeader } from './csv.js?v=2026.04.30.3';
-import { parseSpot, parseIntraday, parseForward, parseBaseload, parseFip } from './markets.js?v=2026.04.30.3';
-import { demoSpot, demoIntraday, demoForward, demoBaseload, demoFip } from './demo.js?v=2026.04.30.3';
+import { REFRESH_MS, SOURCES, AREAS, fiscalYear } from './config.js?v=2026.04.30.4';
+import { fetchCsv, fetchMarketCsv } from './fetcher.js?v=2026.04.30.4';
+import { parseCsvWithHeader } from './csv.js?v=2026.04.30.4';
+import { parseSpot, parseIntraday, parseForward, parseBaseload, parseFip } from './markets.js?v=2026.04.30.4';
+import { demoSpot, demoIntraday, demoForward, demoBaseload, demoFip } from './demo.js?v=2026.04.30.4';
 import {
   renderKpis, renderSpotChart, renderAreaToggles, renderAreaMini,
   renderProfile, renderIntradayChart, renderForward, renderBaseload,
   renderFip, renderTicker, renderHero, startHeroAnimations,
   setStatus, setRefreshing, setMode,
   startCountdown, resetCountdown, toggleFullscreen,
-} from './ui.js?v=2026.04.30.3';
+} from './ui.js?v=2026.04.30.4';
 
 // ───── 状態 ─────────────────────────────────────────────────────
 const state = {
@@ -115,19 +115,41 @@ function render() {
 
 async function loadOne(key, parser, signal) {
   const cfg = SOURCES[key];
-  const urls = expand(cfg.urls);
+  const errors = [];
+
+  // 1) Edge Function (/api/jepx?market=<key>) — server-side で URL 自動探索
   try {
+    const r = await fetchMarketCsv(key, { signal });
+    if (r.text) {
+      const data = parser(parseCsvWithHeader(r.text));
+      if (!data.length) throw new Error('CSV parse 0 件');
+      state[key] = data;
+      state.isDemo[key] = false;
+      state.errors[key] = null;
+      return { key, ok: true, count: data.length, sourceUrl: r.sourceUrl, via: 'edge' };
+    }
+    if (r.errors) errors.push(...r.errors);
+  } catch (e) {
+    errors.push(`edge: ${e.message}`);
+  }
+
+  // 2) URL 候補リスト (公開 CORS プロキシ経由)
+  try {
+    const urls = expand(cfg.urls);
     const { text, sourceUrl } = await fetchCsv(urls, { signal });
-    const parsed = parseCsvWithHeader(text);
-    const data = parser(parsed);
-    if (!data.length) throw new Error('CSV パース結果が 0 件 (列レイアウト変更?)');
+    const data = parser(parseCsvWithHeader(text));
+    if (!data.length) throw new Error('CSV parse 0 件');
     state[key] = data;
     state.isDemo[key] = false;
     state.errors[key] = null;
-    return { key, ok: true, count: data.length, sourceUrl };
+    return { key, ok: true, count: data.length, sourceUrl, via: 'fallback' };
   } catch (e) {
-    state.errors[key] = e;
-    return { key, ok: false, error: e };
+    errors.push(`fallback: ${e.message}`);
+    if (e.detail) errors.push(...e.detail);
+    const err = new Error('全経路で取得失敗');
+    err.detail = errors;
+    state.errors[key] = err;
+    return { key, ok: false, error: err };
   }
 }
 
@@ -170,7 +192,7 @@ async function loadAll() {
   const labels = (arr) => arr.map(r => SOURCES[r.key].label).join(' / ');
   let line = '', mode = 'live', meta = '本番データ';
   if (ok.length === 5) {
-    line = `全 5 市場 LIVE (${ok.map(r => `${SOURCES[r.key].label}: ${r.count}件`).join(' · ')})`;
+    line = `全 5 市場 LIVE (${ok.map(r => `${SOURCES[r.key].label}: ${r.count}件 [${r.via}]`).join(' · ')})`;
     mode = 'live'; meta = `5/5 LIVE`;
   } else if (ok.length > 0) {
     line = `取得成功: ${labels(ok)} / 失敗: ${labels(ng)}`;

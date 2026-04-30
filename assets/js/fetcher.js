@@ -1,7 +1,14 @@
 // CORS プロキシを順番に試しながら、Shift-JIS / UTF-8 を自動判定して
 // テキストとして返す fetcher。
+//
+// 戦略:
+//   1) `/api/jepx?market=<key>` ─ Vercel Edge が候補 URL を server-side で
+//      順次試して 200 を返したものを中継。最速・最確実。
+//   2) `/api/jepx?url=<URL>`    ─ クライアントが知っている URL を Edge 経由で
+//   3) 直 fetch                  ─ JEPX が CORS 許可した時用 (普通は失敗)
+//   4) corsproxy.io / allorigins ─ パブリックフォールバック
 
-import { CORS_PROXIES } from './config.js?v=2026.04.30.3';
+import { CORS_PROXIES } from './config.js?v=2026.04.30.4';
 
 async function tryFetch(url, signal) {
   const res = await fetch(url, {
@@ -10,15 +17,18 @@ async function tryFetch(url, signal) {
     signal,
     headers: { 'Accept': 'text/csv, text/plain, */*' },
   });
-  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  if (!res.ok) {
+    const body = await res.text().catch(() => '');
+    throw new Error(`HTTP ${res.status}${body ? ': ' + body.slice(0, 120) : ''}`);
+  }
+  const sourceUrl = res.headers.get('x-source-url') || null;
   const buf = await res.arrayBuffer();
-  return decodeBytes(buf);
+  return { text: decodeBytes(buf), sourceUrl };
 }
 
 // JEPX の CSV は Shift_JIS。文字化け検知のため UTF-8 → Shift_JIS の順で試す。
 function decodeBytes(buf) {
   const utf8 = new TextDecoder('utf-8', { fatal: false }).decode(buf);
-  // U+FFFD (置換文字) が多い場合は Shift_JIS とみなす
   const replacementCount = (utf8.match(/�/g) || []).length;
   if (replacementCount > 3) {
     try {
@@ -30,28 +40,42 @@ function decodeBytes(buf) {
   return utf8;
 }
 
-// 1 つの URL に対し、複数 CORS プロキシを順に試す。
+// market モード: /api/jepx?market=<key> を最優先で試行
+export async function fetchMarketCsv(marketKey, { signal } = {}) {
+  const errors = [];
+
+  // 1) /api/jepx?market=<key> (Edge 自動探索)
+  try {
+    const r = await tryFetch(`/api/jepx?market=${encodeURIComponent(marketKey)}`, signal);
+    if (r.text && r.text.length > 50) return { text: r.text, sourceUrl: r.sourceUrl || `/api/jepx?market=${marketKey}` };
+  } catch (e) {
+    errors.push(`/api/jepx?market=${marketKey}: ${e.message}`);
+  }
+
+  return { errors };
+}
+
+// URL モード: 候補 URL リストを各 CORS プロキシで順に試す (フォールバック)
 async function fetchWithProxies(url, signal) {
   const errors = [];
   for (const proxy of CORS_PROXIES) {
     const target = proxy(url);
     try {
-      const text = await tryFetch(target, signal);
-      if (text && text.length > 50) return { text, source: target };
+      const r = await tryFetch(target, signal);
+      if (r.text && r.text.length > 50) return { text: r.text, source: target, sourceUrl: r.sourceUrl };
     } catch (e) {
-      errors.push(`${target.slice(0, 60)}…: ${e.message}`);
+      errors.push(`${target.slice(0, 70)}…: ${e.message}`);
     }
   }
-  throw new Error(`全 fetch 失敗: ${errors.join(' / ')}`);
+  throw new Error(errors.join(' / '));
 }
 
-// 候補 URL のリストを順に試行。最初に成功したものを返す。
 export async function fetchCsv(urls, { signal } = {}) {
   const errors = [];
   for (const url of urls) {
     try {
       const out = await fetchWithProxies(url, signal);
-      return { ...out, sourceUrl: url };
+      return { ...out, sourceUrl: out.sourceUrl || url };
     } catch (e) {
       errors.push(`${url}: ${e.message}`);
     }
@@ -60,3 +84,4 @@ export async function fetchCsv(urls, { signal } = {}) {
   err.detail = errors;
   throw err;
 }
+
