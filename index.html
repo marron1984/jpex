@@ -31,7 +31,7 @@
       },
     };
   </script>
-  <link rel="stylesheet" href="assets/css/styles.css?v=2026.04.30.19" />
+  <link rel="stylesheet" href="assets/css/styles.css?v=2026.04.30.20" />
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
 </head>
 <body class="bg-ink-950 text-slate-100 min-h-screen antialiased">
@@ -124,7 +124,30 @@
         </div>
       </section>
 
-      <!-- KANSAI HERO (day-trading focus card) -->
+      <!-- 9 TSO 需給モニタ (LIVE: 各送配電会社の電力使用実績) -->
+      <section id="tso-panel" class="card tso-card">
+        <div class="card-head">
+          <div>
+            <h2 class="card-title">
+              需給モニタ
+              <span class="card-subtitle">9 エリア 電力使用実績 · 5 分粒度</span>
+            </h2>
+            <p class="card-meta" id="tso-meta">—</p>
+          </div>
+          <div class="tso-head-pills">
+            <span class="tso-pill" id="tso-mode-pill">
+              <span class="dot"></span>
+              <span class="text">CONNECTING</span>
+            </span>
+            <span class="tso-totals" id="tso-totals">合計 — GW · 利用率 —%</span>
+          </div>
+        </div>
+        <div class="tso-grid" id="tso-grid">
+          <!-- 9 area cards injected by JS -->
+        </div>
+      </section>
+
+      <!-- KANSAI HERO (compact ticker) -->
       <section id="hero" class="hero card">
         <div class="hero-grid">
           <div class="hero-left">
@@ -191,29 +214,6 @@
               </div>
             </div>
           </div>
-        </div>
-      </section>
-
-      <!-- 9 TSO 需給モニタ (LIVE: 各送配電会社の電力使用実績) -->
-      <section id="tso-panel" class="card tso-card">
-        <div class="card-head">
-          <div>
-            <h2 class="card-title">
-              需給モニタ
-              <span class="card-subtitle">9 エリア 電力使用実績 · 5 分粒度</span>
-            </h2>
-            <p class="card-meta" id="tso-meta">—</p>
-          </div>
-          <div class="tso-head-pills">
-            <span class="tso-pill" id="tso-mode-pill">
-              <span class="dot"></span>
-              <span class="text">CONNECTING</span>
-            </span>
-            <span class="tso-totals" id="tso-totals">合計 — GW · 利用率 —%</span>
-          </div>
-        </div>
-        <div class="tso-grid" id="tso-grid">
-          <!-- 9 area cards injected by JS -->
         </div>
       </section>
 
@@ -527,6 +527,6 @@
     </div>
   </main>
 
-  <script type="module" src="assets/js/app.js?v=2026.04.30.19"></script>
+  <script type="module" src="assets/js/app.js?v=2026.04.30.20"></script>
 </body>
 </html>
