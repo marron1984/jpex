@@ -110,6 +110,48 @@ export default async function handler(req) {
   const reqUrl = new URL(req.url);
   const market = reqUrl.searchParams.get('market');
   const explicitUrl = reqUrl.searchParams.get('url');
+  const diag = reqUrl.searchParams.get('diag');
+
+  // ─── ?diag=1 モード: 全 5 市場を試行して JSON で結果を返す ──
+  if (diag) {
+    const out = {};
+    const markets = Object.keys(URL_PATTERNS);
+    await Promise.all(markets.map(async (m) => {
+      const results = [];
+      for (const pat of URL_PATTERNS[m]) {
+        const u = expand(pat);
+        const r = await tryUrl(u);
+        results.push({ url: u, ok: r.ok, status: r.status, reason: r.reason || null, bytes: r.ok ? r.buf.byteLength : 0 });
+        if (r.ok) break;
+      }
+      // ページスクレイプも試す
+      const pageUrl = MARKET_PAGES[m];
+      const scrapedLinks = [];
+      if (pageUrl && !results.some(r => r.ok)) {
+        try {
+          const pageRes = await fetch(pageUrl, { headers: FETCH_HEADERS, signal: AbortSignal.timeout(8000) });
+          if (pageRes.ok) {
+            const html = await pageRes.text();
+            const set = new Set();
+            let mm;
+            CSV_HREF_RE.lastIndex = 0;
+            while ((mm = CSV_HREF_RE.exec(html))) set.add(absoluteUrl(mm[1], pageUrl));
+            CSV_BARE_RE.lastIndex = 0;
+            while ((mm = CSV_BARE_RE.exec(html))) set.add(mm[0]);
+            scrapedLinks.push(...set);
+          } else {
+            scrapedLinks.push(`PAGE STATUS: ${pageRes.status}`);
+          }
+        } catch (e) {
+          scrapedLinks.push(`PAGE ERROR: ${e.message}`);
+        }
+      }
+      out[m] = { tried: results, scrapedLinks };
+    }));
+    return new Response(JSON.stringify({ now: new Date().toISOString(), markets: out }, null, 2), {
+      headers: { 'Content-Type': 'application/json; charset=utf-8', 'Access-Control-Allow-Origin': '*', 'Cache-Control': 'no-store' },
+    });
+  }
 
   // ─── ?market=… モード: 候補 URL → ページスクレイプの順で探索 ───
   if (market && URL_PATTERNS[market]) {

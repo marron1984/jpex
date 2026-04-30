@@ -1,18 +1,18 @@
 // JEPX Live — エントリーポイント
 
-import { REFRESH_MS, SOURCES, AREAS, fiscalYear } from './config.js?v=2026.04.30.6';
-import { fetchCsv, fetchMarketCsv } from './fetcher.js?v=2026.04.30.6';
-import { parseCsvWithHeader } from './csv.js?v=2026.04.30.6';
-import { parseSpot, parseIntraday, parseForward, parseBaseload, parseFip } from './markets.js?v=2026.04.30.6';
-import { demoSpot, demoIntraday, demoForward, demoBaseload, demoFip } from './demo.js?v=2026.04.30.6';
-import { demoPlant } from './plant.js?v=2026.04.30.6';
+import { REFRESH_MS, SOURCES, AREAS, fiscalYear } from './config.js?v=2026.04.30.7';
+import { fetchCsv, fetchMarketCsv } from './fetcher.js?v=2026.04.30.7';
+import { parseCsvWithHeader } from './csv.js?v=2026.04.30.7';
+import { parseSpot, parseIntraday, parseForward, parseBaseload, parseFip } from './markets.js?v=2026.04.30.7';
+import { demoSpot, demoIntraday, demoForward, demoBaseload, demoFip } from './demo.js?v=2026.04.30.7';
+import { demoPlant } from './plant.js?v=2026.04.30.7';
 import {
   renderKpis, renderSpotChart, renderAreaToggles, renderAreaMini,
   renderProfile, renderIntradayChart, renderForward, renderBaseload,
   renderFip, renderTicker, renderHero, renderPlant, startHeroAnimations,
   setStatus, setRefreshing, setMode,
   startCountdown, resetCountdown, toggleFullscreen,
-} from './ui.js?v=2026.04.30.6';
+} from './ui.js?v=2026.04.30.7';
 
 // ───── 状態 ─────────────────────────────────────────────────────
 const state = {
@@ -210,8 +210,17 @@ async function loadAll() {
   resetCountdown(REFRESH_MS);
 
   // デバッグ用にエラー内容を console に
+  for (const r of ok) {
+    console.log(`%c[JEPX:${r.key}] OK%c ${r.count}件 via ${r.via} %c${r.sourceUrl || ''}`,
+      'color:#4ade80;font-weight:bold', 'color:#94a3b8', 'color:#64748b');
+  }
   for (const r of ng) {
-    console.warn(`[JEPX:${r.key}]`, r.error?.message || r.error, r.error?.detail);
+    console.group(`%c[JEPX:${r.key}] FAILED`, 'color:#fb7185;font-weight:bold');
+    console.warn(r.error?.message || r.error);
+    if (r.error?.detail) for (const d of r.error.detail) console.log('  ·', d);
+    console.info(`💡 単体テスト: ${location.origin}/api/jepx?market=${r.key}`);
+    console.info(`💡 全市場診断: ${location.origin}/api/jepx?diag=1`);
+    console.groupEnd();
   }
 }
 

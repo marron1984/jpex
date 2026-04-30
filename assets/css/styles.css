@@ -301,18 +301,19 @@ canvas { cursor: crosshair; }
 .card.entrance:nth-child(3) { animation-delay: 160ms; }
 .card.entrance:nth-child(4) { animation-delay: 240ms; }
 
-/* ───── Bottom ticker bar ──────────────────────────────────── */
+/* ───── Ticker bar (画面上部固定) ───────────────────────────── */
 .ticker {
-  position: fixed; left: 0; right: 0; bottom: 0;
-  height: 40px;
-  background: linear-gradient(180deg, rgba(10,14,26,0.72), rgba(6,8,15,0.92));
-  border-top: 1px solid rgba(34,211,238,0.20);
+  position: fixed; left: 0; right: 0; top: 0;
+  height: 36px;
+  background: linear-gradient(180deg, rgba(6,8,15,0.95), rgba(10,14,26,0.78));
+  border-bottom: 1px solid rgba(34,211,238,0.22);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
   overflow: hidden;
   z-index: 50;
-  box-shadow: 0 -10px 40px -10px rgba(0,0,0,0.5);
+  box-shadow: 0 10px 40px -10px rgba(0,0,0,0.5);
 }
+.ticker-top { top: 0; bottom: auto; border-top: none; border-bottom: 1px solid rgba(34,211,238,0.22); }
 .ticker::before, .ticker::after {
   content: ""; position: absolute; top: 0; bottom: 0; width: 80px; z-index: 2; pointer-events: none;
 }
@@ -339,8 +340,8 @@ canvas { cursor: crosshair; }
 .ticker-item .sep { color: rgba(34,211,238,0.30); margin: 0 0.5rem; }
 .ticker-loading { color: #475569; font-size: 0.75rem; padding: 0 1rem; }
 
-/* Body padding so bottom content isn't hidden behind ticker */
-body { padding-bottom: 48px; }
+/* Body padding so top content isn't hidden behind ticker */
+body { padding-top: 36px; padding-bottom: 0; }
 
 /* ───── Fullscreen / kiosk tweaks ──────────────────────────── */
 :fullscreen body, :-webkit-full-screen body {
