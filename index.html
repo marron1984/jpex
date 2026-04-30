@@ -31,7 +31,7 @@
       },
     };
   </script>
-  <link rel="stylesheet" href="assets/css/styles.css?v=2026.04.30.14" />
+  <link rel="stylesheet" href="assets/css/styles.css?v=2026.04.30.15" />
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
 </head>
 <body class="bg-ink-950 text-slate-100 min-h-screen antialiased">
@@ -88,8 +88,8 @@
     </div>
   </header>
 
-  <main class="relative z-10 px-6 lg:px-10 pb-16">
-    <div class="max-w-[1600px] mx-auto space-y-6">
+  <main class="relative z-10 px-4 lg:px-6 xl:px-8 pb-16">
+    <div class="max-w-[1800px] mx-auto space-y-4 lg:space-y-5">
 
       <!-- KANSAI HERO (day-trading focus card) -->
       <section id="hero" class="hero card">
@@ -188,6 +188,9 @@
       <section id="kpi-row" class="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-3">
         <!-- KPI cards injected by JS -->
       </section>
+
+      <!-- PLANT + REVENUE: xl 以上で横並び、それ未満では縦積み -->
+      <div class="grid grid-cols-1 2xl:grid-cols-2 gap-4 lg:gap-5">
 
       <!-- PLANT (DEMO): 奈良吉野太陽光発電所 -->
       <section id="plant" class="card plant-card">
@@ -365,6 +368,8 @@
         </div>
       </section>
 
+      </div><!-- end PLANT + REVENUE grid -->
+
       <!-- SPOT MAIN CHART -->
       <section class="card">
         <div class="card-head">
@@ -391,9 +396,9 @@
         </div>
       </section>
 
-      <!-- INTRADAY + FORECAST/SUMMARY -->
-      <section class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div class="card lg:col-span-2">
+      <!-- INTRADAY + PROFILE + FORWARD + BASELOAD (xl で 4 列に圧縮) -->
+      <section class="grid grid-cols-1 lg:grid-cols-3 xl:grid-cols-4 gap-4 lg:gap-5">
+        <div class="card lg:col-span-2 xl:col-span-2">
           <div class="card-head">
             <div>
               <h2 class="card-title">時間前市場 <span class="card-subtitle">Intraday · 約定加重平均価格</span></h2>
@@ -419,47 +424,47 @@
             <!-- profile cards -->
           </div>
         </div>
-      </section>
 
-      <!-- FORWARD + BASELOAD -->
-      <section class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div class="card">
-          <div class="card-head">
-            <div>
-              <h2 class="card-title">先渡市場 <span class="card-subtitle">Forward Market</span></h2>
-              <p class="card-meta" id="forward-meta">—</p>
+        <!-- Forward + Baseload を 1 列に縦スタック (xl) / 2 列 (lg) / 1 列 (mobile) -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-1 gap-4 lg:gap-5 lg:col-span-3 xl:col-span-1">
+          <div class="card">
+            <div class="card-head">
+              <div>
+                <h2 class="card-title">先渡市場 <span class="card-subtitle">Forward</span></h2>
+                <p class="card-meta" id="forward-meta">—</p>
+              </div>
+            </div>
+            <div class="overflow-x-auto px-2 pb-3">
+              <table class="data-table" id="forward-table">
+                <thead>
+                  <tr>
+                    <th>商品</th><th>受渡</th><th class="text-right">24h</th>
+                    <th class="text-right">昼間</th><th class="text-right">量</th>
+                  </tr>
+                </thead>
+                <tbody></tbody>
+              </table>
             </div>
           </div>
-          <div class="overflow-x-auto px-2 pb-3">
-            <table class="data-table" id="forward-table">
-              <thead>
-                <tr>
-                  <th>商品</th><th>受渡期間</th><th class="text-right">24h 平均</th>
-                  <th class="text-right">昼間</th><th class="text-right">約定量</th>
-                </tr>
-              </thead>
-              <tbody></tbody>
-            </table>
-          </div>
-        </div>
 
-        <div class="card">
-          <div class="card-head">
-            <div>
-              <h2 class="card-title">ベースロード市場 <span class="card-subtitle">Baseload Market</span></h2>
-              <p class="card-meta" id="baseload-meta">—</p>
+          <div class="card">
+            <div class="card-head">
+              <div>
+                <h2 class="card-title">ベースロード市場 <span class="card-subtitle">Baseload</span></h2>
+                <p class="card-meta" id="baseload-meta">—</p>
+              </div>
             </div>
-          </div>
-          <div class="overflow-x-auto px-2 pb-3">
-            <table class="data-table" id="baseload-table">
-              <thead>
-                <tr>
-                  <th>年度</th><th>エリア</th><th class="text-right">約定価格</th>
-                  <th class="text-right">約定量</th>
-                </tr>
-              </thead>
-              <tbody></tbody>
-            </table>
+            <div class="overflow-x-auto px-2 pb-3">
+              <table class="data-table" id="baseload-table">
+                <thead>
+                  <tr>
+                    <th>年度</th><th>エリア</th><th class="text-right">価格</th>
+                    <th class="text-right">量</th>
+                  </tr>
+                </thead>
+                <tbody></tbody>
+              </table>
+            </div>
           </div>
         </div>
       </section>
@@ -489,6 +494,6 @@
     </div>
   </main>
 
-  <script type="module" src="assets/js/app.js?v=2026.04.30.14"></script>
+  <script type="module" src="assets/js/app.js?v=2026.04.30.15"></script>
 </body>
 </html>

@@ -1,13 +1,13 @@
 // JEPX Live — エントリーポイント
 
-import { REFRESH_MS, SOURCES, AREAS, fiscalYear } from './config.js?v=2026.04.30.14';
-import { fetchCsv, fetchMarketCsv } from './fetcher.js?v=2026.04.30.14';
-import { parseCsvWithHeader } from './csv.js?v=2026.04.30.14';
-import { parseSpot, parseIntraday, parseForward, parseBaseload, parseFip } from './markets.js?v=2026.04.30.14';
-import { demoSpot, demoIntraday, demoForward, demoBaseload, demoFip } from './demo.js?v=2026.04.30.14';
-import { demoPlant, demoWeather, demoRevenue } from './plant.js?v=2026.04.30.14';
-import { fetchTso, buildSyntheticTso } from './tso.js?v=2026.04.30.14';
-import { fetchWeather, lastCachedWeather } from './weather.js?v=2026.04.30.14';
+import { REFRESH_MS, SOURCES, AREAS, fiscalYear } from './config.js?v=2026.04.30.15';
+import { fetchCsv, fetchMarketCsv } from './fetcher.js?v=2026.04.30.15';
+import { parseCsvWithHeader } from './csv.js?v=2026.04.30.15';
+import { parseSpot, parseIntraday, parseForward, parseBaseload, parseFip } from './markets.js?v=2026.04.30.15';
+import { demoSpot, demoIntraday, demoForward, demoBaseload, demoFip } from './demo.js?v=2026.04.30.15';
+import { demoPlant, demoWeather, demoRevenue } from './plant.js?v=2026.04.30.15';
+import { fetchTso, buildSyntheticTso } from './tso.js?v=2026.04.30.15';
+import { fetchWeather, lastCachedWeather } from './weather.js?v=2026.04.30.15';
 import {
   renderKpis, renderSpotChart, renderAreaToggles, renderAreaMini,
   renderProfile, renderIntradayChart, renderForward, renderBaseload,
@@ -16,7 +16,7 @@ import {
   startHeroAnimations,
   setStatus, setRefreshing, setMode, setSnapshotInfo,
   startCountdown, resetCountdown, toggleFullscreen,
-} from './ui.js?v=2026.04.30.14';
+} from './ui.js?v=2026.04.30.15';
 
 // ───── 状態 ─────────────────────────────────────────────────────
 const state = {

@@ -1,6 +1,6 @@
 // 描画レイヤ。Chart.js + DOM 操作。
 
-import { AREAS, SLOT_LABELS } from './config.js?v=2026.04.30.14';
+import { AREAS, SLOT_LABELS } from './config.js?v=2026.04.30.15';
 
 // ───── ユーティリティ ──────────────────────────────────────────────
 
@@ -1011,6 +1011,10 @@ export function renderTsoGrid(tsoData) {
     entry.nameEl.textContent = info.label;
     entry.liveEl.className = 'live-tag ' + (info.isLive ? 'live' : 'demo');
     entry.liveEl.textContent = info.isLive ? 'LIVE' : 'DEMO';
+
+    // LIVE を先頭側、DEMO を後ろ側に並べる。同じ区分内は元の地理順を保持。
+    const baseOrder = TSO_AREA_ORDER.indexOf(key) + 1;     // 1..9
+    entry.node.style.order = info.isLive ? baseOrder : (100 + baseOrder);
 
     // 値カウントアップ
     const prev = tsoPrev.get(key) || {};
