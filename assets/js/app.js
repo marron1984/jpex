@@ -8,7 +8,8 @@ import { demoSpot, demoIntraday, demoForward, demoBaseload, demoFip } from './de
 import {
   renderKpis, renderSpotChart, renderAreaToggles, renderAreaMini,
   renderProfile, renderIntradayChart, renderForward, renderBaseload,
-  renderFip, renderTicker, setStatus, setRefreshing, setDemoMode,
+  renderFip, renderTicker, renderHero, startHeroAnimations,
+  setStatus, setRefreshing, setDemoMode,
   startCountdown, resetCountdown, toggleFullscreen,
 } from './ui.js';
 
@@ -17,7 +18,7 @@ const state = {
   spot: [], intraday: [], forward: [], baseload: [], fip: [],
   isDemo: { spot: false, intraday: false, forward: false, baseload: false, fip: false },
   spotRange: 'today',
-  spotAreas: new Set(['system', 'tokyo']),
+  spotAreas: new Set(['system', 'kansai']),
   errors: {},
   inFlight: null,
 };
@@ -49,13 +50,13 @@ function deriveMetrics() {
     if (todayRows.length) {
       const last = todayRows[todayRows.length - 1];
       m.spotNow = last.system;
-      m.tokyoNow = last.tokyo;
+      m.kansaiNow = last.kansai;
+      m.kansaiSpread = (last.kansai != null && last.system != null) ? last.kansai - last.system : null;
       m.spotNowSlot = last.slot;
       m.spotNowDate = last.date;
       const prev = todayRows.length > 1 ? todayRows[todayRows.length - 2] : null;
       if (prev) m.spotNowDelta = pctDelta(prev.system, last.system);
-      const prevTokyo = todayRows.find(r => r.slot === last.slot - 1);
-      if (prevTokyo && prevTokyo.tokyo != null) m.tokyoDelta = pctDelta(prevTokyo.tokyo, last.tokyo);
+      if (prev && prev.kansai != null && last.kansai != null) m.kansaiDelta = pctDelta(prev.kansai, last.kansai);
 
       const sysVals = todayRows.map(r => r.system).filter(v => v != null);
       m.spotAvgToday = avg(sysVals);
@@ -93,6 +94,7 @@ function sum(arr) { return arr.reduce((s, v) => s + v, 0); }
 // ───── 描画 ─────────────────────────────────────────────────────
 
 function render() {
+  renderHero(state.spot, state.intraday);
   renderKpis(deriveMetrics());
   renderSpotChart(state.spot, { range: state.spotRange, activeAreas: [...state.spotAreas] });
   renderAreaToggles(state.spotAreas, () => render());
@@ -227,8 +229,16 @@ setDemoMode(true, ['spot', 'intraday', 'forward', 'baseload', 'fip']);
 setStatus({ updatedAt: Date.now(), line: 'デモデータ表示中 — JEPX に接続中…', state: 'stale' });
 render();
 
-// 2) カウントダウンリング開始 + 実データ取得
+// 2) カウントダウンリング + Hero パネルの常時アニメーション開始
 startCountdown(REFRESH_MS);
+startHeroAnimations(() => {
+  if (!state.spot || !state.spot.length) return [];
+  const dates = [...new Set(state.spot.map(r => r.date))].sort();
+  const today = dates[dates.length - 1];
+  return state.spot.filter(r => r.date === today);
+});
+
+// 3) 実データ取得を開始
 loadAll();
 setInterval(loadAll, REFRESH_MS);
 

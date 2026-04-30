@@ -81,6 +81,77 @@
   <main class="relative z-10 px-6 lg:px-10 pb-16">
     <div class="max-w-[1600px] mx-auto space-y-6">
 
+      <!-- KANSAI HERO (day-trading focus card) -->
+      <section id="hero" class="hero card">
+        <div class="hero-scan"></div>
+        <div class="hero-grid">
+          <div class="hero-left">
+            <div class="hero-tag">
+              <span class="tag-pill">KANSAI</span>
+              <span class="tag-name">関西エリア</span>
+              <span class="tag-live">
+                <span class="dot"></span> LIVE
+              </span>
+            </div>
+            <div class="hero-price-block">
+              <div id="hero-price" class="hero-price">¥—</div>
+              <div class="hero-price-sub">
+                <span id="hero-delta-pct" class="hero-delta">—</span>
+                <span id="hero-delta-abs" class="hero-delta-abs">—</span>
+              </div>
+            </div>
+            <div id="hero-tape" class="hero-tape" title="直近 24 コマのティック差分"></div>
+            <div class="hero-volbars">
+              <div class="volrow">
+                <span class="volrow-label">SELL 売り入札</span>
+                <div class="volrow-bar"><div id="hero-sell" class="volrow-fill volrow-sell"></div></div>
+                <span id="hero-sell-val" class="volrow-val">—</span>
+              </div>
+              <div class="volrow">
+                <span class="volrow-label">BUY  買い入札</span>
+                <div class="volrow-bar"><div id="hero-buy" class="volrow-fill volrow-buy"></div></div>
+                <span id="hero-buy-val" class="volrow-val">—</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="hero-right">
+            <div class="hero-clock">
+              <span id="hero-clock-time" class="clock-time">--:--:--</span>
+              <span id="hero-clock-slot" class="clock-slot">SLOT —</span>
+            </div>
+            <div class="hero-stats">
+              <div class="stat"><span>OPEN</span><b id="hero-open">¥—</b></div>
+              <div class="stat"><span>HIGH</span><b id="hero-high" class="hi">¥—</b></div>
+              <div class="stat"><span>LOW</span><b id="hero-low" class="lo">¥—</b></div>
+              <div class="stat"><span>VWAP</span><b id="hero-vwap">¥—</b></div>
+              <div class="stat"><span>VOL</span><b id="hero-vol">—</b></div>
+              <div class="stat"><span>vs SYS</span><b id="hero-spread">—</b></div>
+            </div>
+
+            <div class="hero-range">
+              <div class="hero-range-track">
+                <div class="hero-range-fill" id="hero-range-fill"></div>
+                <div class="hero-range-marker" id="hero-range-marker"></div>
+              </div>
+              <div class="hero-range-labels">
+                <span id="hero-range-low">¥—</span>
+                <span class="hero-range-mid">DAY RANGE</span>
+                <span id="hero-range-high">¥—</span>
+              </div>
+            </div>
+
+            <div class="hero-spark-wrap">
+              <canvas id="hero-spark" class="hero-spark"></canvas>
+              <div class="hero-spark-label">
+                <span>関西 直近 48 コマ</span>
+                <span id="hero-spark-stat" class="hero-spark-stat">—</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
       <!-- KPI ROW -->
       <section id="kpi-row" class="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-3">
         <!-- KPI cards injected by JS -->

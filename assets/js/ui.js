@@ -91,12 +91,12 @@ export function renderKpis(metrics) {
       formatter: fYen(2),
       sub: metrics.spotNowSlot ? `${SLOT_LABELS[metrics.spotNowSlot - 1]} コマ · ${fmt.date(metrics.spotNowDate)}` : '—',
       delta: metrics.spotNowDelta },
-    { key: 'tokyo',     tone: 'sun',
-      label: '東京エリア',
-      numeric: metrics.tokyoNow,
+    { key: 'kansai',    tone: 'sun',
+      label: '関西エリア',
+      numeric: metrics.kansaiNow,
       formatter: fYen(2),
-      sub: '本日 · 直近コマ',
-      delta: metrics.tokyoDelta },
+      sub: metrics.kansaiSpread != null ? `vs SYS ${metrics.kansaiSpread > 0 ? '+' : ''}${metrics.kansaiSpread.toFixed(2)}` : '本日 · 直近コマ',
+      delta: metrics.kansaiDelta },
     { key: 'avg-today', tone: 'mint',
       label: '本日 平均',
       numeric: metrics.spotAvgToday,
@@ -489,6 +489,243 @@ export function setDemoMode(on, marketKeys = []) {
     badge.classList.remove('flex');
   }
 }
+
+// ───── KANSAI HERO ───────────────────────────────────────────
+
+const heroState = { lastPrice: null, lastTickHash: null };
+
+export function renderHero(spotRecords, intradayRecords) {
+  if (!spotRecords || !spotRecords.length) return;
+
+  const dates = [...new Set(spotRecords.map(r => r.date))].sort();
+  const today = dates[dates.length - 1];
+  const yesterday = dates[dates.length - 2];
+
+  const todayRows = spotRecords.filter(r => r.date === today);
+  const yRows     = spotRecords.filter(r => r.date === yesterday);
+  if (!todayRows.length) return;
+
+  const last = todayRows[todayRows.length - 1];
+  const open = todayRows.find(r => r.kansai != null)?.kansai ?? null;
+  const kansaiVals = todayRows.map(r => r.kansai).filter(v => v != null);
+  if (!kansaiVals.length) return;
+
+  const high = Math.max(...kansaiVals);
+  const low  = Math.min(...kansaiVals);
+  const vwap = avg(kansaiVals);
+  const vol  = todayRows.reduce((s, r) => s + (r.volume || 0), 0);
+  const sellVol = todayRows.reduce((s, r) => s + (r.sellVol || 0), 0);
+  const buyVol  = todayRows.reduce((s, r) => s + (r.buyVol  || 0), 0);
+  const spread = (last.kansai != null && last.system != null) ? last.kansai - last.system : null;
+
+  const yClose = yRows.length ? yRows.map(r => r.kansai).filter(v => v != null).slice(-1)[0] ?? null : null;
+  const dayDeltaAbs = (last.kansai != null && yClose != null) ? last.kansai - yClose : null;
+  const dayDeltaPct = (yClose) ? (dayDeltaAbs / yClose) * 100 : null;
+
+  // 現在価格 (アニメ更新)
+  const priceEl = document.getElementById('hero-price');
+  if (priceEl) {
+    const prev = heroState.lastPrice;
+    if (prev != null && Math.abs(prev - last.kansai) > 1e-6) {
+      animateValue(priceEl, prev, last.kansai, (v) => `¥${v.toFixed(2)}`, 800);
+      priceEl.classList.remove('flash-up', 'flash-down');
+      void priceEl.offsetWidth;
+      priceEl.classList.add(last.kansai > prev ? 'flash-up' : 'flash-down');
+    } else {
+      priceEl.textContent = `¥${last.kansai.toFixed(2)}`;
+    }
+    heroState.lastPrice = last.kansai;
+  }
+
+  // delta
+  const dpct = document.getElementById('hero-delta-pct');
+  const dabs = document.getElementById('hero-delta-abs');
+  if (dpct) {
+    const cls = dayDeltaPct == null ? '' : dayDeltaPct > 0 ? 'up' : dayDeltaPct < 0 ? 'down' : '';
+    const arrow = dayDeltaPct == null ? '' : dayDeltaPct > 0 ? '▲' : dayDeltaPct < 0 ? '▼' : '—';
+    dpct.className = 'hero-delta ' + cls;
+    dpct.textContent = dayDeltaPct == null ? '— %' : `${arrow} ${fmt.pct(dayDeltaPct)}`;
+    if (dabs) dabs.textContent = dayDeltaAbs == null ? '' : `${dayDeltaAbs > 0 ? '+' : ''}${dayDeltaAbs.toFixed(2)} 円`;
+  }
+
+  // OHLC + VWAP + VOL + spread
+  setText('hero-open',  open == null ? '¥—' : fmt.yen(open));
+  setText('hero-high',  fmt.yen(high));
+  setText('hero-low',   fmt.yen(low));
+  setText('hero-vwap',  fmt.yen(vwap));
+  setText('hero-vol',   fmt.gwh(vol));
+  if (spread != null) {
+    const el = document.getElementById('hero-spread');
+    if (el) {
+      const cls = spread > 0 ? 'hi' : spread < 0 ? 'lo' : '';
+      el.className = (cls ? cls : '');
+      el.textContent = `${spread > 0 ? '+' : ''}${spread.toFixed(2)}`;
+    }
+  } else setText('hero-spread', '—');
+
+  // Day range
+  const fill = document.getElementById('hero-range-fill');
+  const marker = document.getElementById('hero-range-marker');
+  if (fill && marker && high > low) {
+    const pct = ((last.kansai - low) / (high - low)) * 100;
+    const clamped = Math.max(0, Math.min(100, pct));
+    fill.style.width = clamped + '%';
+    marker.style.left = clamped + '%';
+  }
+  setText('hero-range-low',  fmt.yen(low));
+  setText('hero-range-high', fmt.yen(high));
+
+  // ボリューム
+  const totalVol = sellVol + buyVol || 1;
+  const sellPct = (sellVol / totalVol) * 100;
+  const buyPct  = (buyVol  / totalVol) * 100;
+  const sellEl = document.getElementById('hero-sell');
+  const buyEl  = document.getElementById('hero-buy');
+  if (sellEl) sellEl.style.width = sellPct.toFixed(1) + '%';
+  if (buyEl)  buyEl.style.width  = buyPct.toFixed(1)  + '%';
+  setText('hero-sell-val', fmt.gwh(sellVol));
+  setText('hero-buy-val',  fmt.gwh(buyVol));
+
+  // Tick tape (直近 24 コマ、前コマ差分で色分け)
+  renderHeroTape(todayRows.slice(-24));
+
+  // Sparkline
+  drawHeroSpark(todayRows);
+  setText('hero-spark-stat', `H ${fmt.yen(high)}  L ${fmt.yen(low)}  VWAP ${fmt.yen(vwap)}`);
+}
+
+function renderHeroTape(rows) {
+  const tape = document.getElementById('hero-tape');
+  if (!tape) return;
+  const hash = rows.map(r => `${r.slot}:${r.kansai}`).join('|');
+  if (hash === heroState.lastTickHash) return;
+  heroState.lastTickHash = hash;
+  tape.innerHTML = '';
+  let prev = null;
+  const vals = rows.map(r => r.kansai).filter(v => v != null);
+  const min = vals.length ? Math.min(...vals) : 0;
+  const max = vals.length ? Math.max(...vals) : 1;
+  const range = Math.max(0.5, max - min);
+  rows.forEach((r, i) => {
+    const v = r.kansai;
+    if (v == null) return;
+    const cls = prev == null ? 'flat' : v > prev ? 'up' : v < prev ? 'down' : 'flat';
+    prev = v;
+    const heightPct = 25 + ((v - min) / range) * 75;
+    const bar = document.createElement('div');
+    bar.className = 'tick-bar ' + cls + (i === rows.length - 1 ? ' last' : '');
+    bar.style.height = heightPct.toFixed(1) + '%';
+    bar.style.animationDelay = `${i * 14}ms`;
+    bar.title = `${SLOT_LABELS[r.slot - 1]} ¥${v.toFixed(2)}`;
+    tape.appendChild(bar);
+  });
+}
+
+function drawHeroSpark(rows) {
+  const canvas = document.getElementById('hero-spark');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const dpr = window.devicePixelRatio || 1;
+  const rect = canvas.getBoundingClientRect();
+  if (rect.width === 0 || rect.height === 0) return;
+  canvas.width = rect.width * dpr;
+  canvas.height = rect.height * dpr;
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  const w = rect.width, h = rect.height;
+  ctx.clearRect(0, 0, w, h);
+
+  const data = rows.map(r => r.kansai).filter(v => v != null);
+  if (data.length < 2) return;
+  const min = Math.min(...data), max = Math.max(...data);
+  const range = Math.max(0.5, max - min);
+  const step = w / (data.length - 1);
+  const padTop = 18, padBottom = 6;
+  const innerH = h - padTop - padBottom;
+
+  // baseline area
+  const grad = ctx.createLinearGradient(0, padTop, 0, h - padBottom);
+  grad.addColorStop(0, 'rgba(250, 204, 21, 0.40)');
+  grad.addColorStop(1, 'rgba(250, 204, 21, 0.00)');
+  ctx.beginPath();
+  ctx.moveTo(0, h - padBottom);
+  data.forEach((v, i) => {
+    const x = i * step;
+    const y = padTop + (1 - (v - min) / range) * innerH;
+    if (i === 0) ctx.lineTo(x, y); else ctx.lineTo(x, y);
+  });
+  ctx.lineTo((data.length - 1) * step, h - padBottom);
+  ctx.closePath();
+  ctx.fillStyle = grad;
+  ctx.fill();
+
+  // line
+  ctx.beginPath();
+  data.forEach((v, i) => {
+    const x = i * step;
+    const y = padTop + (1 - (v - min) / range) * innerH;
+    if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+  });
+  ctx.strokeStyle = '#facc15';
+  ctx.lineWidth = 2;
+  ctx.shadowColor = 'rgba(250, 204, 21, 0.55)';
+  ctx.shadowBlur = 8;
+  ctx.stroke();
+  ctx.shadowBlur = 0;
+
+  // current marker (脈動)
+  const lastIdx = data.length - 1;
+  const lx = lastIdx * step;
+  const ly = padTop + (1 - (data[lastIdx] - min) / range) * innerH;
+  const t = (performance.now() % 1400) / 1400;
+  const r = 3 + Math.sin(t * Math.PI * 2) * 1.5;
+  ctx.fillStyle = '#facc15';
+  ctx.beginPath();
+  ctx.arc(lx, ly, r, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.strokeStyle = 'rgba(250,204,21,0.45)';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.arc(lx, ly, r + 4, 0, Math.PI * 2);
+  ctx.stroke();
+}
+
+// 常時動かす要素 — 時計を毎秒、スパーク marker pulse を ~12fps で
+let _heroAnimRaf = null;
+let _heroLastSpark = 0;
+let _heroLastClock = 0;
+export function startHeroAnimations(getRows) {
+  function tick() {
+    const now = performance.now();
+
+    if (now - _heroLastClock >= 250) {
+      _heroLastClock = now;
+      const d = new Date();
+      const hh = String(d.getHours()).padStart(2, '0');
+      const mm = String(d.getMinutes()).padStart(2, '0');
+      const ss = String(d.getSeconds()).padStart(2, '0');
+      const slot = Math.min(48, Math.floor((d.getHours() * 60 + d.getMinutes()) / 30) + 1);
+      const t = document.getElementById('hero-clock-time');
+      if (t) t.innerHTML = `${hh}<span class="sep">:</span>${mm}<span class="sep">:</span>${ss}`;
+      const s = document.getElementById('hero-clock-slot');
+      if (s) s.textContent = `SLOT ${slot} · ${SLOT_LABELS[slot - 1]}`;
+    }
+
+    if (now - _heroLastSpark >= 80) {
+      _heroLastSpark = now;
+      const rows = getRows ? getRows() : null;
+      if (rows && rows.length) drawHeroSpark(rows);
+    }
+
+    _heroAnimRaf = requestAnimationFrame(tick);
+  }
+  if (!_heroAnimRaf) _heroAnimRaf = requestAnimationFrame(tick);
+}
+
+function setText(id, text) {
+  const el = document.getElementById(id);
+  if (el) el.textContent = text;
+}
+function avg(arr) { return arr.length ? arr.reduce((s, v) => s + v, 0) / arr.length : null; }
 
 // ───── Ticker bar ────────────────────────────────────────────
 
