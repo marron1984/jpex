@@ -8,7 +8,8 @@ import { demoSpot, demoIntraday, demoForward, demoBaseload, demoFip } from './de
 import {
   renderKpis, renderSpotChart, renderAreaToggles, renderAreaMini,
   renderProfile, renderIntradayChart, renderForward, renderBaseload,
-  renderFip, setStatus, setRefreshing, setDemoMode,
+  renderFip, renderTicker, setStatus, setRefreshing, setDemoMode,
+  startCountdown, resetCountdown, toggleFullscreen,
 } from './ui.js';
 
 // ───── 状態 ─────────────────────────────────────────────────────
@@ -101,6 +102,7 @@ function render() {
   renderForward(state.forward);
   renderBaseload(state.baseload);
   renderFip(state.fip);
+  renderTicker(state.spot, state.intraday);
 }
 
 // ───── データ取得 ───────────────────────────────────────────────
@@ -172,6 +174,7 @@ async function loadAll() {
     stateTag = 'error';
   }
   setStatus({ updatedAt: Date.now(), line, state: stateTag });
+  resetCountdown(REFRESH_MS);
 
   // デバッグ用にエラー内容を console に
   for (const r of ng) {
@@ -194,6 +197,14 @@ function isFileProtocol() {
 // ───── イベント ─────────────────────────────────────────────────
 
 document.getElementById('refresh-btn').addEventListener('click', () => loadAll());
+document.getElementById('fullscreen-btn').addEventListener('click', () => toggleFullscreen());
+
+// キーボードショートカット: F = フルスクリーン, R = 即更新
+window.addEventListener('keydown', (e) => {
+  if (e.target.matches('input, textarea, [contenteditable]')) return;
+  if (e.key === 'f' || e.key === 'F') { e.preventDefault(); toggleFullscreen(); }
+  else if (e.key === 'r' || e.key === 'R') { e.preventDefault(); loadAll(); }
+});
 
 document.querySelectorAll('[data-spot-range]').forEach(btn => {
   btn.addEventListener('click', () => {
@@ -216,7 +227,8 @@ setDemoMode(true, ['spot', 'intraday', 'forward', 'baseload', 'fip']);
 setStatus({ updatedAt: Date.now(), line: 'デモデータ表示中 — JEPX に接続中…', state: 'stale' });
 render();
 
-// 2) 実データを取得しに行く (成功した市場だけ上書き)
+// 2) カウントダウンリング開始 + 実データ取得
+startCountdown(REFRESH_MS);
 loadAll();
 setInterval(loadAll, REFRESH_MS);
 

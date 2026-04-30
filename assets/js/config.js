@@ -4,7 +4,7 @@
 // 年は実行時に置換 ({YEAR} はその年の西暦4桁)。
 // 命名・パスが変更された場合は配列に候補を増やすだけで自動的にフォールバックする。
 
-export const REFRESH_MS = 10 * 60 * 1000; // 10 分
+export const REFRESH_MS = 60 * 1000; // 1 分 (Vercel Edge Function が 5 分キャッシュするので JEPX への実 fetch は最大 1/5)
 
 // CORS 直接 fetch がブロックされた場合に経由するプロキシリスト。
 // 順番に試行する。

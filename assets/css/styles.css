@@ -177,3 +177,140 @@ body {
 /* Smooth transitions */
 * { -webkit-tap-highlight-color: transparent; }
 canvas { cursor: crosshair; }
+
+/* ───── Icon buttons (refresh / fullscreen) ────────────────── */
+.icon-btn {
+  width: 32px; height: 32px;
+  display: grid; place-items: center;
+  border-radius: 9999px;
+  background: rgba(255,255,255,0.04);
+  color: #cbd5e1;
+  ring: 1px solid rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.06);
+  transition: all 0.15s ease;
+  cursor: pointer;
+}
+.icon-btn:hover { background: rgba(255,255,255,0.08); color: #fff; transform: translateY(-1px); }
+.icon-btn-volt {
+  background: rgba(34,211,238,0.15);
+  border-color: rgba(34,211,238,0.40);
+  color: #7df9ff;
+}
+.icon-btn-volt:hover { background: rgba(34,211,238,0.25); }
+
+/* ───── Countdown ring ─────────────────────────────────────── */
+.countdown-ring {
+  width: 14px; height: 14px;
+  border-radius: 50%;
+  background:
+    conic-gradient(#22d3ee calc(var(--pct, 0) * 360deg), rgba(34,211,238,0.18) 0);
+  position: relative;
+  flex-shrink: 0;
+  transition: background 0.2s linear;
+}
+.countdown-ring::before {
+  content: '';
+  position: absolute; inset: 3px;
+  border-radius: 50%;
+  background: #0a0e1a;
+}
+
+/* ───── Card / KPI entrance + flash ────────────────────────── */
+@keyframes entrance {
+  from { opacity: 0; transform: translateY(10px) scale(0.985); filter: blur(4px); }
+  to   { opacity: 1; transform: translateY(0)    scale(1);     filter: blur(0); }
+}
+.entrance { animation: entrance 0.55s cubic-bezier(0.22, 1, 0.36, 1) backwards; }
+
+@keyframes flash-up {
+  0%   { box-shadow: 0 0 0 0 rgba(251,113,133,0); }
+  20%  { box-shadow: 0 0 0 1px rgba(251,113,133,0.65), 0 0 28px 4px rgba(251,113,133,0.40); }
+  100% { box-shadow: 0 0 0 0 rgba(251,113,133,0); }
+}
+@keyframes flash-down {
+  0%   { box-shadow: 0 0 0 0 rgba(74,222,128,0); }
+  20%  { box-shadow: 0 0 0 1px rgba(74,222,128,0.65), 0 0 28px 4px rgba(74,222,128,0.40); }
+  100% { box-shadow: 0 0 0 0 rgba(74,222,128,0); }
+}
+.flash-up   { animation: flash-up   1.4s ease-out; }
+.flash-down { animation: flash-down 1.4s ease-out; }
+
+/* Number text easing (when animateNumber rewrites textContent) */
+.kpi .value, .mini .price { transition: color 0.3s ease; }
+.kpi.flash-up   .value { color: #fb7185; }
+.kpi.flash-down .value { color: #4ade80; }
+
+/* ───── Card entrance stagger ──────────────────────────────── */
+.card.entrance:nth-child(1) { animation-delay: 0ms; }
+.card.entrance:nth-child(2) { animation-delay: 80ms; }
+.card.entrance:nth-child(3) { animation-delay: 160ms; }
+.card.entrance:nth-child(4) { animation-delay: 240ms; }
+
+/* ───── Bottom ticker bar ──────────────────────────────────── */
+.ticker {
+  position: fixed; left: 0; right: 0; bottom: 0;
+  height: 40px;
+  background: linear-gradient(180deg, rgba(10,14,26,0.72), rgba(6,8,15,0.92));
+  border-top: 1px solid rgba(34,211,238,0.20);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  overflow: hidden;
+  z-index: 50;
+  box-shadow: 0 -10px 40px -10px rgba(0,0,0,0.5);
+}
+.ticker::before, .ticker::after {
+  content: ""; position: absolute; top: 0; bottom: 0; width: 80px; z-index: 2; pointer-events: none;
+}
+.ticker::before { left: 0;  background: linear-gradient(90deg, #06080f, transparent); }
+.ticker::after  { right: 0; background: linear-gradient(-90deg, #06080f, transparent); }
+.ticker-track {
+  display: inline-flex; gap: 2.25rem; align-items: center;
+  white-space: nowrap; padding: 0 1.5rem;
+  height: 100%;
+  animation: ticker-scroll 90s linear infinite;
+  will-change: transform;
+}
+.ticker:hover .ticker-track { animation-play-state: paused; }
+@keyframes ticker-scroll {
+  from { transform: translate3d(0, 0, 0); }
+  to   { transform: translate3d(-50%, 0, 0); }
+}
+.ticker-item { font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 0.82rem; display: inline-flex; gap: 0.5rem; align-items: center; }
+.ticker-item .name { color: #94a3b8; font-weight: 600; font-size: 0.7rem; letter-spacing: 0.05em; text-transform: uppercase; }
+.ticker-item .price { color: #e2e8f0; font-weight: 700; }
+.ticker-item .delta-up   { color: #fb7185; }
+.ticker-item .delta-down { color: #4ade80; }
+.ticker-item .delta-flat { color: #64748b; }
+.ticker-item .sep { color: rgba(34,211,238,0.30); margin: 0 0.5rem; }
+.ticker-loading { color: #475569; font-size: 0.75rem; padding: 0 1rem; }
+
+/* Body padding so bottom content isn't hidden behind ticker */
+body { padding-bottom: 48px; }
+
+/* ───── Fullscreen / kiosk tweaks ──────────────────────────── */
+:fullscreen body, :-webkit-full-screen body {
+  background: #06080f;
+}
+:fullscreen .ticker { background: rgba(0,0,0,0.85); }
+
+/* Slight breathing on the live dot when fullscreen */
+@keyframes breathe {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(74,222,128,0.6); }
+  50%      { box-shadow: 0 0 0 6px rgba(74,222,128,0); }
+}
+#live-dot { animation: breathe 2.4s ease-in-out infinite; }
+
+/* ───── Background subtle drift ────────────────────────────── */
+.bg-glow { animation: glow-drift 25s ease-in-out infinite alternate; }
+@keyframes glow-drift {
+  from { transform: translate(0, 0); }
+  to   { transform: translate(-3%, 2%); }
+}
+
+/* ───── Reduce motion accessibility ────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  .entrance, .flash-up, .flash-down, .ticker-track, .bg-glow, #live-dot {
+    animation: none !important;
+  }
+  * { transition-duration: 0.01ms !important; }
+}

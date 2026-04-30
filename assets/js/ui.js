@@ -77,64 +77,108 @@ const baseChartOptions = () => ({
 
 // ───── KPIs ──────────────────────────────────────────────────
 
+const kpiNodes = new Map();   // key -> { node, valueEl, subEl, deltaEl, lastNumeric }
+
 export function renderKpis(metrics) {
   const root = document.getElementById('kpi-row');
-  clear(root);
+
+  const fYen = (digits = 2) => (v) => fmt.yen(v, digits);
 
   const cards = [
-    {
-      tone: 'volt',
+    { key: 'spot-now',  tone: 'volt',
       label: '直近 システムP',
-      value: fmt.yen(metrics.spotNow),
+      numeric: metrics.spotNow,
+      formatter: fYen(2),
       sub: metrics.spotNowSlot ? `${SLOT_LABELS[metrics.spotNowSlot - 1]} コマ · ${fmt.date(metrics.spotNowDate)}` : '—',
-      delta: metrics.spotNowDelta,
-    },
-    {
-      tone: 'sun',
+      delta: metrics.spotNowDelta },
+    { key: 'tokyo',     tone: 'sun',
       label: '東京エリア',
-      value: fmt.yen(metrics.tokyoNow),
+      numeric: metrics.tokyoNow,
+      formatter: fYen(2),
       sub: '本日 · 直近コマ',
-      delta: metrics.tokyoDelta,
-    },
-    {
-      tone: 'mint',
+      delta: metrics.tokyoDelta },
+    { key: 'avg-today', tone: 'mint',
       label: '本日 平均',
-      value: fmt.yen(metrics.spotAvgToday),
-      sub: `H ${fmt.yen(metrics.spotMaxToday)}  /  L ${fmt.yen(metrics.spotMinToday)}`,
-    },
-    {
-      tone: 'rose',
+      numeric: metrics.spotAvgToday,
+      formatter: fYen(2),
+      sub: `H ${fmt.yen(metrics.spotMaxToday)}  /  L ${fmt.yen(metrics.spotMinToday)}` },
+    { key: 'intraday',  tone: 'rose',
       label: '時間前 加重平均',
-      value: fmt.yen(metrics.intradayAvg),
+      numeric: metrics.intradayAvg,
+      formatter: fYen(2),
       sub: metrics.intradayLatest ? `直近 ${fmt.yen(metrics.intradayLatest)}` : '—',
-      delta: metrics.intradayDelta,
-    },
-    {
-      tone: 'violet',
+      delta: metrics.intradayDelta },
+    { key: 'volume',    tone: 'violet',
       label: '本日 約定量',
-      value: fmt.gwh(metrics.spotVolToday),
-      sub: '30分コマ合計',
-    },
-    {
-      tone: 'slate',
+      numeric: metrics.spotVolToday,
+      formatter: (v) => fmt.gwh(v),
+      sub: '30分コマ合計' },
+    { key: 'day-delta', tone: 'slate',
       label: '前日比',
-      value: fmt.pct(metrics.spotDayDelta),
-      sub: metrics.spotAvgYesterday != null ? `昨日 ${fmt.yen(metrics.spotAvgYesterday)}` : '—',
-    },
+      numeric: metrics.spotDayDelta,
+      formatter: (v) => fmt.pct(v),
+      sub: metrics.spotAvgYesterday != null ? `昨日 ${fmt.yen(metrics.spotAvgYesterday)}` : '—' },
   ];
 
-  for (const c of cards) {
-    const node = el('div', 'kpi');
-    node.dataset.tone = c.tone;
-    const deltaCls = c.delta == null ? 'flat' : (c.delta > 0 ? 'up' : c.delta < 0 ? 'down' : 'flat');
-    const deltaTxt = c.delta == null ? '' : `<div class="delta ${deltaCls}">${c.delta > 0 ? '▲' : c.delta < 0 ? '▼' : '—'} ${fmt.pct(c.delta)}</div>`;
-    node.innerHTML = `
-      <div class="label">${c.label}</div>
-      <div class="value">${c.value}</div>
-      ${deltaTxt}
-      <div class="sub">${c.sub}</div>`;
-    root.appendChild(node);
+  cards.forEach((c, idx) => {
+    let entry = kpiNodes.get(c.key);
+    if (!entry) {
+      const node = el('div', 'kpi entrance');
+      node.dataset.tone = c.tone;
+      node.style.animationDelay = `${idx * 70}ms`;
+      node.innerHTML = `
+        <div class="label"></div>
+        <div class="value"></div>
+        <div class="delta flat"></div>
+        <div class="sub"></div>`;
+      root.appendChild(node);
+      entry = {
+        node,
+        labelEl: node.querySelector('.label'),
+        valueEl: node.querySelector('.value'),
+        deltaEl: node.querySelector('.delta'),
+        subEl:   node.querySelector('.sub'),
+        lastNumeric: null,
+      };
+      kpiNodes.set(c.key, entry);
+    }
+    entry.labelEl.textContent = c.label;
+    entry.subEl.textContent = c.sub || '';
+
+    // 値: 前回と比較してフラッシュ + カウントアップ
+    const prev = entry.lastNumeric;
+    const next = c.numeric;
+    if (prev != null && next != null && Math.abs(prev - next) > 1e-6) {
+      animateValue(entry.valueEl, prev, next, c.formatter);
+      entry.node.classList.remove('flash-up', 'flash-down');
+      void entry.node.offsetWidth; // restart animation
+      entry.node.classList.add(next > prev ? 'flash-up' : 'flash-down');
+    } else {
+      entry.valueEl.textContent = c.formatter(next);
+    }
+    entry.lastNumeric = next;
+
+    // delta
+    const dCls = c.delta == null ? 'flat' : (c.delta > 0 ? 'up' : c.delta < 0 ? 'down' : 'flat');
+    const dArrow = c.delta == null ? '' : (c.delta > 0 ? '▲' : c.delta < 0 ? '▼' : '—');
+    entry.deltaEl.className = 'delta ' + dCls;
+    entry.deltaEl.textContent = c.delta == null ? '' : `${dArrow} ${fmt.pct(c.delta)}`;
+  });
+}
+
+// 値を ease-out で滑らかに更新するカウントアップ
+function animateValue(el, from, to, formatter, duration = 700) {
+  if (el._anim) cancelAnimationFrame(el._anim);
+  const start = performance.now();
+  function frame(now) {
+    const t = Math.min(1, (now - start) / duration);
+    const eased = 1 - Math.pow(1 - t, 3); // easeOutCubic
+    const v = from + (to - from) * eased;
+    el.textContent = formatter(v);
+    if (t < 1) el._anim = requestAnimationFrame(frame);
+    else { el.textContent = formatter(to); el._anim = null; }
   }
+  el._anim = requestAnimationFrame(frame);
 }
 
 // ───── Spot chart ─────────────────────────────────────────────
@@ -443,6 +487,104 @@ export function setDemoMode(on, marketKeys = []) {
   } else {
     badge.classList.add('hidden');
     badge.classList.remove('flex');
+  }
+}
+
+// ───── Ticker bar ────────────────────────────────────────────
+
+const tickerPrev = new Map();   // 直近価格 (色決定用)
+
+export function renderTicker(spotRecords, intradayRecords) {
+  const track = document.getElementById('ticker-track');
+  if (!track) return;
+  const items = [];
+
+  if (spotRecords && spotRecords.length) {
+    const today = spotRecords[spotRecords.length - 1].date;
+    const todayRows = spotRecords.filter(r => r.date === today);
+    const last = todayRows[todayRows.length - 1];
+    if (last) {
+      for (const a of AREAS) {
+        const v = last[a.key];
+        if (v == null) continue;
+        const k = `area:${a.key}`;
+        const prev = tickerPrev.get(k);
+        const dCls = prev == null ? 'delta-flat' : v > prev ? 'delta-up' : v < prev ? 'delta-down' : 'delta-flat';
+        const dArrow = prev == null ? '·' : v > prev ? '▲' : v < prev ? '▼' : '—';
+        items.push(`
+          <span class="ticker-item">
+            <span class="name" style="color:${a.color}">${a.label}</span>
+            <span class="price">¥${v.toFixed(2)}</span>
+            <span class="${dCls}">${dArrow}${prev != null ? ` ${(v - prev > 0 ? '+' : '')}${(v - prev).toFixed(2)}` : ''}</span>
+          </span>`);
+        tickerPrev.set(k, v);
+      }
+    }
+  }
+
+  if (intradayRecords && intradayRecords.length) {
+    const last = intradayRecords[intradayRecords.length - 1];
+    if (last && last.price != null) {
+      const k = 'im:price';
+      const prev = tickerPrev.get(k);
+      const dCls = prev == null ? 'delta-flat' : last.price > prev ? 'delta-up' : last.price < prev ? 'delta-down' : 'delta-flat';
+      const dArrow = prev == null ? '·' : last.price > prev ? '▲' : last.price < prev ? '▼' : '—';
+      items.push(`
+        <span class="ticker-item">
+          <span class="name" style="color:#fb7185">時間前 加重平均</span>
+          <span class="price">¥${last.price.toFixed(2)}</span>
+          <span class="${dCls}">${dArrow}</span>
+        </span>`);
+      tickerPrev.set(k, last.price);
+    }
+  }
+
+  if (items.length === 0) {
+    track.innerHTML = '<span class="ticker-loading">streaming…</span>';
+    return;
+  }
+
+  // セパレータ挟みつつ 2 周ぶん複製で seamless ループ
+  const separator = '<span class="sep">·</span>';
+  const segment = items.join(separator);
+  track.innerHTML = segment + separator + segment;
+}
+
+// ───── Countdown ring ────────────────────────────────────────
+
+let countdownState = { nextAt: 0, total: 60_000, raf: null };
+
+export function startCountdown(intervalMs) {
+  countdownState.total = intervalMs;
+  countdownState.nextAt = Date.now() + intervalMs;
+  if (!countdownState.raf) countdownState.raf = requestAnimationFrame(tickCountdown);
+}
+
+export function resetCountdown(intervalMs) {
+  countdownState.total = intervalMs ?? countdownState.total;
+  countdownState.nextAt = Date.now() + countdownState.total;
+}
+
+function tickCountdown() {
+  const ring = document.getElementById('countdown-ring');
+  if (ring) {
+    const remaining = Math.max(0, countdownState.nextAt - Date.now());
+    const pct = 1 - (remaining / countdownState.total);
+    ring.style.setProperty('--pct', pct.toFixed(3));
+  }
+  countdownState.raf = requestAnimationFrame(tickCountdown);
+}
+
+// ───── Fullscreen ────────────────────────────────────────────
+
+export function toggleFullscreen() {
+  const doc = document;
+  const el = document.documentElement;
+  const isFull = doc.fullscreenElement || doc.webkitFullscreenElement;
+  if (!isFull) {
+    (el.requestFullscreen || el.webkitRequestFullscreen)?.call(el);
+  } else {
+    (doc.exitFullscreen || doc.webkitExitFullscreen)?.call(doc);
   }
 }
 
