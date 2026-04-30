@@ -178,6 +178,20 @@ body {
 * { -webkit-tap-highlight-color: transparent; }
 canvas { cursor: crosshair; }
 
+/* ───── Brand logo ─────────────────────────────────────────── */
+.brand-logo {
+  height: 44px;
+  width: auto;
+  max-width: 200px;
+  object-fit: contain;
+  filter: drop-shadow(0 0 12px rgba(34, 211, 238, 0.30));
+  flex-shrink: 0;
+  user-select: none;
+}
+@media (max-width: 600px) {
+  .brand-logo { height: 36px; max-width: 140px; }
+}
+
 /* ───── Mode badge (LIVE / CONNECTING / DEMO) ──────────────── */
 .mode-badge {
   display: inline-flex; align-items: center; gap: 0.5rem;

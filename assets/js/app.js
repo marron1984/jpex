@@ -1,18 +1,18 @@
 // JEPX Live — エントリーポイント
 
-import { REFRESH_MS, SOURCES, AREAS, fiscalYear } from './config.js?v=2026.04.30.5';
-import { fetchCsv, fetchMarketCsv } from './fetcher.js?v=2026.04.30.5';
-import { parseCsvWithHeader } from './csv.js?v=2026.04.30.5';
-import { parseSpot, parseIntraday, parseForward, parseBaseload, parseFip } from './markets.js?v=2026.04.30.5';
-import { demoSpot, demoIntraday, demoForward, demoBaseload, demoFip } from './demo.js?v=2026.04.30.5';
-import { demoPlant } from './plant.js?v=2026.04.30.5';
+import { REFRESH_MS, SOURCES, AREAS, fiscalYear } from './config.js?v=2026.04.30.6';
+import { fetchCsv, fetchMarketCsv } from './fetcher.js?v=2026.04.30.6';
+import { parseCsvWithHeader } from './csv.js?v=2026.04.30.6';
+import { parseSpot, parseIntraday, parseForward, parseBaseload, parseFip } from './markets.js?v=2026.04.30.6';
+import { demoSpot, demoIntraday, demoForward, demoBaseload, demoFip } from './demo.js?v=2026.04.30.6';
+import { demoPlant } from './plant.js?v=2026.04.30.6';
 import {
   renderKpis, renderSpotChart, renderAreaToggles, renderAreaMini,
   renderProfile, renderIntradayChart, renderForward, renderBaseload,
   renderFip, renderTicker, renderHero, renderPlant, startHeroAnimations,
   setStatus, setRefreshing, setMode,
   startCountdown, resetCountdown, toggleFullscreen,
-} from './ui.js?v=2026.04.30.5';
+} from './ui.js?v=2026.04.30.6';
 
 // ───── 状態 ─────────────────────────────────────────────────────
 const state = {
