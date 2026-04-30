@@ -1,7 +1,7 @@
 // 奈良吉野太陽光発電所 (DEMO) — 仮想 2.0MW 太陽光発電所のデモデータ生成。
-// 出力プロファイル + 天気予報 (30分刻み 48コマ = 24時間) を返す。
+// 出力プロファイル + 天気予報 (30分刻み 48コマ = 24時間) + 売電収入 を返す。
 
-import { fiscalYear } from './config.js?v=2026.04.30.9';
+import { fiscalYear } from './config.js?v=2026.04.30.10';
 
 const PLANT = {
   name: '奈良吉野太陽光発電所',
@@ -156,5 +156,146 @@ export function demoPlant() {
     todayHourly,
     last7,
     daily,
+  };
+}
+
+// ───── 売電収入 (DEMO) ────────────────────────────────────────
+//
+// JEPX 関西エリアスポット価格 × FIP プレミアムで売電単価を構成。
+// 24h: 30 分コマ × 48 で kWh × 単価を積算 → 本日売電収入。
+// 30日: plant.daily の kwh × 日別平均価格 で簡易集計。
+
+const FIP_PREMIUM = 4.20;          // ¥/kWh — 太陽光 50kW 以上 FIP プレミアム想定
+const FALLBACK_KANSAI_BASE = 9.50; // 関西エリア平均仮定
+
+// 30 分スロット (0-47) → 関西エリア相当のスポット価格 (¥/kWh)
+// 朝 7-9 / 夕 17-20 にピーク、昼 11-14 にソーラー過剰で dip する典型 W 字
+function syntheticKansai(slotIdx, dayOffset = 0) {
+  const t = slotIdx * 0.5; // hour
+  const morning = Math.exp(-Math.pow((t - 8.0) / 1.5, 2)) * 7.5;
+  const evening = Math.exp(-Math.pow((t - 19.0) / 1.7, 2)) * 11.5;
+  const noonDip = -Math.exp(-Math.pow((t - 12.0) / 2.2, 2)) * 6.2;
+  const seasonal = Math.sin((dayOffset / 30) * Math.PI * 2) * 0.8;
+  const noise = Math.sin(slotIdx * 1.31 + dayOffset * 2.7) * 0.45;
+  return Math.max(1.5, FALLBACK_KANSAI_BASE + morning + evening + noonDip + seasonal + noise);
+}
+
+// 実 spot 配列 (records) から本日コマごとの kansai 価格を引く。
+// 取れない slot は syntheticKansai でフォールバック。
+function todaySlotPrices(spotRecords) {
+  const arr = new Array(48).fill(null);
+  if (Array.isArray(spotRecords) && spotRecords.length) {
+    const dates = [...new Set(spotRecords.map(r => r.date))].sort();
+    const today = dates[dates.length - 1];
+    for (const r of spotRecords) {
+      if (r.date !== today) continue;
+      const idx = (r.slot | 0) - 1;
+      if (idx >= 0 && idx < 48 && r.kansai != null) arr[idx] = r.kansai;
+    }
+  }
+  for (let i = 0; i < 48; i++) {
+    if (arr[i] == null) arr[i] = syntheticKansai(i, 0);
+  }
+  return arr;
+}
+
+export function demoRevenue(plant, spotRecords) {
+  if (!plant) return null;
+  const now = new Date();
+  const todayStr = ymd(now);
+  const currentSlotIdx = Math.min(47, Math.floor((now.getHours() * 60 + now.getMinutes()) / 30));
+
+  const kansai = todaySlotPrices(spotRecords);
+
+  // 本日: 0..currentSlotIdx までの 30 分積算 (kWh = kW × 0.5h)
+  const slots = [];
+  let todayRev = 0;
+  let todayKwh = 0;
+  for (let i = 0; i < 48; i++) {
+    const h = Math.floor(i / 2);
+    const m = (i % 2) * 30;
+    const factor = solarFactor(h, m, 0, 0.92);
+    const kwhSlot = PLANT.capacity_kw * factor * 0.5;
+    const unit = kansai[i] + FIP_PREMIUM;
+    const rev = kwhSlot * unit;
+    const isPast = i <= currentSlotIdx;
+    if (isPast) {
+      todayKwh += kwhSlot;
+      todayRev += rev;
+    }
+    slots.push({
+      slot: i + 1,
+      timeStr: `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`,
+      kansai: kansai[i],
+      premium: FIP_PREMIUM,
+      unit,
+      kwh: kwhSlot,
+      revenue: rev,
+      isPast,
+      isCurrent: i === currentSlotIdx,
+    });
+  }
+  const todayUnit = todayKwh > 0 ? todayRev / todayKwh : null;
+
+  // 30 日履歴: plant.daily の kwh × 日別平均価格
+  const dailyRev = plant.daily.map((d, idx) => {
+    const dayOffset = plant.daily.length - 1 - idx;
+    // 1 日の代表価格 = 各スロット価格の発電量加重平均
+    let wsum = 0, wkwh = 0;
+    for (let i = 0; i < 48; i++) {
+      const h = Math.floor(i / 2);
+      const factor = solarFactor(h, (i % 2) * 30, dayOffset, 0.85);
+      const slotKwh = PLANT.capacity_kw * factor * 0.5;
+      const slotPrice = syntheticKansai(i, dayOffset) + FIP_PREMIUM;
+      wsum  += slotKwh * slotPrice;
+      wkwh  += slotKwh;
+    }
+    const avgUnit = wkwh > 0 ? wsum / wkwh : FALLBACK_KANSAI_BASE + FIP_PREMIUM;
+    return { date: d.date, kwh: d.kwh, revenue: d.kwh * avgUnit, unit: avgUnit };
+  });
+
+  // 月累計 / 年度累計 (30 日しか持っていないので接続的に外挿)
+  const monthStr = todayStr.slice(0, 7);
+  const monthDays = dailyRev.filter(d => d.date.startsWith(monthStr));
+  const monthRev = monthDays.reduce((s, d) => s + d.revenue, 0);
+  const monthKwh = monthDays.reduce((s, d) => s + d.kwh, 0);
+
+  const fy = fiscalYear(now);
+  const fyStart = new Date(fy, 3, 1); // 4/1
+  const fyDays = Math.max(1, Math.floor((now - fyStart) / 86_400_000) + 1);
+  const dailyAvgRev = dailyRev.length ? dailyRev.reduce((s, d) => s + d.revenue, 0) / dailyRev.length : 0;
+  const dailyAvgKwh = dailyRev.length ? dailyRev.reduce((s, d) => s + d.kwh, 0) / dailyRev.length : 0;
+  const fyRev = dailyAvgRev * fyDays;
+  const fyKwh = dailyAvgKwh * fyDays;
+
+  // DoD / vs 30日平均 (本日リアルタイム積算と直近確定日比較)
+  const yesterday = dailyRev[dailyRev.length - 2];
+  const dod = (yesterday && yesterday.revenue) ? ((todayRev - yesterday.revenue) / yesterday.revenue) * 100 : null;
+  const vsAvg = (dailyAvgRev) ? ((todayRev - dailyAvgRev) / dailyAvgRev) * 100 : null;
+
+  // 機会損失/うまみ: もし FIP プレミアム抜きでスポットだけだったら
+  const todaySpotOnly = slots.filter(s => s.isPast).reduce((s, x) => s + x.kwh * x.kansai, 0);
+  const fipBonus = todayRev - todaySpotOnly;
+
+  return {
+    fy,
+    fyDays,
+    fipPremium: FIP_PREMIUM,
+    todayRev,
+    todayKwh,
+    todayUnit,
+    todaySpotOnly,
+    fipBonus,
+    monthRev,
+    monthKwh,
+    fyRev,
+    fyKwh,
+    dod,
+    vsAvg,
+    dailyAvgRev,
+    slots,
+    dailyRev,
+    currentSlotIdx,
+    spotIsLive: Array.isArray(spotRecords) && spotRecords.length > 0,
   };
 }

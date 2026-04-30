@@ -1,6 +1,6 @@
 // 描画レイヤ。Chart.js + DOM 操作。
 
-import { AREAS, SLOT_LABELS } from './config.js?v=2026.04.30.9';
+import { AREAS, SLOT_LABELS } from './config.js?v=2026.04.30.10';
 
 // ───── ユーティリティ ──────────────────────────────────────────────
 
@@ -629,6 +629,232 @@ export function renderPlant(p) {
         scales: {
           x: { ticks: { color: '#64748b', font: { size: 9 } }, grid: { display: false } },
           y: { ticks: { color: '#64748b', font: { size: 9 }, callback: v => `${v}` }, grid: { color: 'rgba(255,255,255,0.04)' }, beginAtZero: true },
+        },
+      },
+    });
+  }
+}
+
+// ───── REVENUE (売電収入 DEMO) ───────────────────────────────
+
+let revCharts = { daily: null, slot: null };
+const revPrev = {};
+
+function animateRevValue(id, next, formatter, key) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  const prev = revPrev[key ?? id];
+  if (prev != null && next != null && Math.abs(prev - next) > 1e-6) {
+    animateValue(el, prev, next, formatter, 700);
+  } else {
+    el.textContent = formatter(next);
+  }
+  revPrev[key ?? id] = next;
+}
+
+const fYenWhole = (v) => (v == null || !Number.isFinite(v)) ? '¥—' :
+  '¥' + Math.round(v).toLocaleString('ja-JP');
+
+const fYenK = (v) => (v == null || !Number.isFinite(v)) ? '—' :
+  (v / 1000).toLocaleString('ja-JP', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+
+export function renderRevenue(rev, plant) {
+  if (!rev) return;
+
+  // メタ
+  const premiumEl = document.getElementById('rev-premium');
+  if (premiumEl) premiumEl.textContent = rev.fipPremium.toFixed(2);
+  const spotPill = document.getElementById('rev-spot-pill');
+  if (spotPill) {
+    spotPill.classList.toggle('off', !rev.spotIsLive);
+    spotPill.querySelector('.dot')?.classList.toggle('off', !rev.spotIsLive);
+  }
+  const spotMode = document.getElementById('rev-spot-mode');
+  if (spotMode) spotMode.textContent = rev.spotIsLive ? '関西スポット (LIVE)' : '関西スポット (合成)';
+
+  // 主要数値
+  animateRevValue('rev-today',     rev.todayRev,      fYenWhole);
+  animateRevValue('rev-month',     rev.monthRev,      fYenWhole);
+  animateRevValue('rev-fy',        rev.fyRev,         fYenWhole);
+  animateRevValue('rev-bonus',     rev.fipBonus,      fYenWhole);
+
+  // 単価
+  setText('rev-today-unit', rev.todayUnit == null ? '¥— / kWh' :
+    `¥${rev.todayUnit.toFixed(2)} / kWh`);
+  setText('rev-today-kwh',  rev.todayKwh ? `${(rev.todayKwh / 1000).toFixed(2)} MWh` : '— MWh');
+
+  setText('rev-month-sub', rev.monthKwh ? `${(rev.monthKwh / 1000).toFixed(0)} MWh · ${rev.dailyAvgRev ? '¥' + Math.round(rev.dailyAvgRev).toLocaleString('ja-JP') + '/日 平均' : ''}` : '—');
+  setText('rev-fy-sub',    `FY${rev.fy} · ${rev.fyDays} 日経過 · ${(rev.fyKwh / 1000).toFixed(0)} MWh`);
+
+  // DoD
+  const dod = document.getElementById('rev-dod');
+  if (dod) {
+    if (rev.dod == null) {
+      dod.textContent = '—'; dod.classList.remove('up', 'down');
+    } else {
+      dod.textContent = `${rev.dod > 0 ? '+' : ''}${rev.dod.toFixed(1)}%`;
+      dod.classList.toggle('up',   rev.dod > 0);
+      dod.classList.toggle('down', rev.dod < 0);
+    }
+  }
+  // vs 30 日平均
+  const va = document.getElementById('rev-vs-avg');
+  if (va) {
+    if (rev.vsAvg == null) {
+      va.textContent = '—'; va.classList.remove('up', 'down');
+    } else {
+      va.textContent = `${rev.vsAvg > 0 ? '+' : ''}${rev.vsAvg.toFixed(1)}%`;
+      va.classList.toggle('up',   rev.vsAvg > 0);
+      va.classList.toggle('down', rev.vsAvg < 0);
+    }
+  }
+  setText('rev-vs-avg-sub',
+    rev.dailyAvgRev ? `平均日収入 ¥${Math.round(rev.dailyAvgRev).toLocaleString('ja-JP')}` : '—');
+
+  // チャート: 30日 売電収入
+  const c1 = document.getElementById('rev-daily-chart');
+  if (c1 && typeof Chart !== 'undefined') {
+    const labels = rev.dailyRev.map(d => d.date.slice(5));
+    const data   = rev.dailyRev.map(d => d.revenue / 1000); // 千円
+    if (revCharts.daily) revCharts.daily.destroy();
+    revCharts.daily = new Chart(c1, {
+      type: 'bar',
+      data: { labels, datasets: [{
+        label: '売電収入',
+        data,
+        backgroundColor: (ctx) => {
+          const idx = ctx.dataIndex;
+          const isToday = idx === data.length - 1;
+          const { ctx: c, chartArea } = ctx.chart;
+          if (!chartArea) return isToday ? '#facc15' : '#4ade80';
+          const g = c.createLinearGradient(0, chartArea.top, 0, chartArea.bottom);
+          if (isToday) {
+            g.addColorStop(0, '#fde68a'); g.addColorStop(1, '#f59e0b');
+          } else {
+            g.addColorStop(0, '#86efac'); g.addColorStop(1, '#16a34a');
+          }
+          return g;
+        },
+        borderRadius: 4, borderSkipped: false,
+      }]},
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            backgroundColor: 'rgba(10,14,26,0.95)',
+            borderColor: 'rgba(74,222,128,0.40)',
+            borderWidth: 1, cornerRadius: 8,
+            titleColor: '#86efac', bodyColor: '#e2e8f0',
+            callbacks: {
+              label: (c) => {
+                const d = rev.dailyRev[c.dataIndex];
+                return [
+                  `売電収入: ¥${Math.round(d.revenue).toLocaleString('ja-JP')}`,
+                  `発電量: ${(d.kwh / 1000).toFixed(1)} MWh`,
+                  `単価:   ¥${d.unit.toFixed(2)}/kWh`,
+                ];
+              },
+            },
+          },
+        },
+        scales: {
+          x: { ticks: { color: '#64748b', font: { size: 9 }, autoSkip: true, maxTicksLimit: 10 }, grid: { display: false } },
+          y: { ticks: { color: '#64748b', font: { size: 9 }, callback: v => `¥${v}k` }, grid: { color: 'rgba(255,255,255,0.04)' }, beginAtZero: true },
+        },
+      },
+    });
+  }
+
+  // チャート: 本日 30 分コマ別 単価 × 出力
+  const c2 = document.getElementById('rev-slot-chart');
+  if (c2 && typeof Chart !== 'undefined') {
+    const labels = rev.slots.map(s => s.timeStr);
+    const unit   = rev.slots.map(s => s.unit);                // ¥/kWh
+    const mw     = rev.slots.map(s => (s.kwh * 2) / 1000);    // (kWh / 0.5h) → MW
+    const past   = rev.slots.map(s => s.isPast ? s.unit : null);
+    if (revCharts.slot) revCharts.slot.destroy();
+    revCharts.slot = new Chart(c2, {
+      type: 'bar',
+      data: {
+        labels,
+        datasets: [
+          {
+            type: 'bar',
+            label: '出力 (MW)',
+            data: mw,
+            yAxisID: 'yMw',
+            backgroundColor: (ctx) => {
+              const i = ctx.dataIndex;
+              const isPast = rev.slots[i]?.isPast;
+              return isPast ? 'rgba(250,204,21,0.55)' : 'rgba(250,204,21,0.18)';
+            },
+            borderRadius: 2, borderSkipped: false,
+            barPercentage: 0.95, categoryPercentage: 0.95,
+          },
+          {
+            type: 'line',
+            label: '単価 ¥/kWh',
+            data: unit,
+            yAxisID: 'yYen',
+            borderColor: 'rgba(148,163,184,0.5)',
+            borderDash: [3, 3],
+            borderWidth: 1.4,
+            tension: 0.25,
+            pointRadius: 0,
+            fill: false,
+          },
+          {
+            type: 'line',
+            label: '単価 (経過済)',
+            data: past,
+            yAxisID: 'yYen',
+            borderColor: '#4ade80',
+            backgroundColor: 'rgba(74,222,128,0.16)',
+            borderWidth: 2.2,
+            tension: 0.25,
+            pointRadius: 0,
+            fill: true,
+            spanGaps: false,
+          },
+        ],
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        interaction: { mode: 'index', intersect: false },
+        plugins: {
+          legend: {
+            display: true, position: 'top', align: 'end',
+            labels: { color: '#94a3b8', font: { size: 10 }, boxWidth: 8, boxHeight: 8, usePointStyle: true, filter: (item) => item.text !== '単価 (経過済)' },
+          },
+          tooltip: {
+            backgroundColor: 'rgba(10,14,26,0.95)',
+            borderColor: 'rgba(74,222,128,0.40)',
+            borderWidth: 1, cornerRadius: 8,
+            titleColor: '#86efac', bodyColor: '#e2e8f0',
+            callbacks: {
+              title: (items) => items[0] ? `${rev.slots[items[0].dataIndex].timeStr} (#${rev.slots[items[0].dataIndex].slot})` : '',
+              label: (c) => {
+                const s = rev.slots[c.dataIndex];
+                if (c.dataset.yAxisID === 'yMw') return `出力: ${((s.kwh * 2) / 1000).toFixed(2)} MW`;
+                return `単価: ¥${s.unit.toFixed(2)}/kWh (FIP+¥${s.premium})`;
+              },
+            },
+          },
+        },
+        scales: {
+          x: { ticks: { color: '#64748b', font: { size: 9 }, autoSkip: true, maxTicksLimit: 12 }, grid: { display: false } },
+          yYen: {
+            position: 'left', beginAtZero: true,
+            ticks: { color: '#86efac', font: { size: 9 }, callback: v => `¥${v}` },
+            grid: { color: 'rgba(255,255,255,0.04)' },
+            title: { display: false },
+          },
+          yMw: {
+            position: 'right', beginAtZero: true, suggestedMax: (plant?.capacityKw ?? 2000) / 1000,
+            ticks: { color: '#facc15', font: { size: 9 }, callback: v => `${v}MW` },
+            grid: { display: false },
+          },
         },
       },
     });

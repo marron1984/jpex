@@ -31,7 +31,7 @@
       },
     };
   </script>
-  <link rel="stylesheet" href="assets/css/styles.css?v=2026.04.30.9" />
+  <link rel="stylesheet" href="assets/css/styles.css?v=2026.04.30.10" />
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
 </head>
 <body class="bg-ink-950 text-slate-100 min-h-screen antialiased">
@@ -283,6 +283,88 @@
         </div>
       </section>
 
+      <!-- 売電収入 (DEMO): 奈良吉野太陽光発電所 × FIP プレミアム × 関西スポット -->
+      <section id="revenue" class="card revenue-card">
+        <div class="revenue-head">
+          <div class="revenue-title">
+            <span class="revenue-icon">💴</span>
+            <div>
+              <h2 class="card-title">
+                売電収入
+                <span class="plant-tag rev-tag">DEMO</span>
+              </h2>
+              <p class="card-meta">
+                奈良吉野太陽光 × FIP プレミアム + JEPX <span id="rev-spot-mode">関西スポット</span>
+              </p>
+            </div>
+          </div>
+          <div class="rev-mode-pills">
+            <span class="rev-pill rev-pill-fip">
+              FIP +¥<span id="rev-premium">—</span>/kWh
+            </span>
+            <span class="rev-pill rev-pill-spot" id="rev-spot-pill">
+              <span class="dot"></span> SPOT 連動
+            </span>
+          </div>
+        </div>
+
+        <div class="revenue-grid">
+          <div class="rev-stats">
+            <div class="rev-stat rev-stat-primary">
+              <span class="label">本日 売電収入</span>
+              <span class="value num" id="rev-today">¥—</span>
+              <span class="sub">単価 <b id="rev-today-unit">¥— / kWh</b> · <span id="rev-today-kwh">— MWh</span></span>
+            </div>
+            <div class="rev-stat">
+              <span class="label">今月 累計</span>
+              <span class="value num" id="rev-month">¥—</span>
+              <span class="sub" id="rev-month-sub">— MWh</span>
+            </div>
+            <div class="rev-stat">
+              <span class="label">年度 累計</span>
+              <span class="value num" id="rev-fy">¥—</span>
+              <span class="sub" id="rev-fy-sub">— 日経過</span>
+            </div>
+            <div class="rev-stat">
+              <span class="label">前日比</span>
+              <span class="value num" id="rev-dod">—%</span>
+              <span class="sub">DAY-OVER-DAY</span>
+            </div>
+            <div class="rev-stat">
+              <span class="label">vs 30日平均</span>
+              <span class="value num" id="rev-vs-avg">—%</span>
+              <span class="sub" id="rev-vs-avg-sub">本日 vs 平均日収入</span>
+            </div>
+            <div class="rev-stat rev-stat-bonus">
+              <span class="label">FIP プレミアム寄与</span>
+              <span class="value num" id="rev-bonus">¥—</span>
+              <span class="sub">本日 · vs スポットのみ</span>
+            </div>
+          </div>
+
+          <div class="rev-charts">
+            <div class="rev-chart-block">
+              <div class="rev-chart-head">
+                <span class="t">過去 30 日 売電収入</span>
+                <span class="u">千円 / 日</span>
+              </div>
+              <div class="rev-chart-canvas-wrap">
+                <canvas id="rev-daily-chart"></canvas>
+              </div>
+            </div>
+            <div class="rev-chart-block">
+              <div class="rev-chart-head">
+                <span class="t">本日 30 分コマ別 単価 × 出力</span>
+                <span class="u">¥/kWh & MW</span>
+              </div>
+              <div class="rev-chart-canvas-wrap">
+                <canvas id="rev-slot-chart"></canvas>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
       <!-- SPOT MAIN CHART -->
       <section class="card">
         <div class="card-head">
@@ -407,6 +489,6 @@
     </div>
   </main>
 
-  <script type="module" src="assets/js/app.js?v=2026.04.30.9"></script>
+  <script type="module" src="assets/js/app.js?v=2026.04.30.10"></script>
 </body>
 </html>
