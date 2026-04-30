@@ -1,39 +1,39 @@
 {
-  "updatedAt": "2026-04-30T07:09:45.454Z",
+  "updatedAt": "2026-04-30T07:10:52.536Z",
   "runner": "github-actions",
   "markets": {
     "spot": {
-      "ok": false,
-      "attempts": 6,
-      "lastError": "status 403",
-      "keptPrevious": false,
-      "previousAt": null
+      "ok": true,
+      "url": "https://www.jepx.jp/market/excel/spot_2026.csv",
+      "via": "pattern",
+      "bytes": 376563,
+      "attempts": 1
     },
     "intraday": {
-      "ok": false,
-      "attempts": 5,
-      "lastError": "status 403",
-      "keptPrevious": false,
-      "previousAt": null
+      "ok": true,
+      "url": "https://www.jepx.jp/market/excel/im_trade_summary_2026.csv",
+      "via": "pattern",
+      "bytes": 76361,
+      "attempts": 3
     },
     "forward": {
       "ok": false,
       "attempts": 5,
-      "lastError": "status 403",
+      "lastError": "status 404",
       "keptPrevious": false,
       "previousAt": null
     },
     "baseload": {
       "ok": false,
       "attempts": 5,
-      "lastError": "status 403",
+      "lastError": "status 404",
       "keptPrevious": false,
       "previousAt": null
     },
     "fip": {
       "ok": false,
       "attempts": 5,
-      "lastError": "status 403",
+      "lastError": "status 404",
       "keptPrevious": false,
       "previousAt": null
     }
