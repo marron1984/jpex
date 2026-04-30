@@ -994,6 +994,110 @@ body { padding-top: 36px; padding-bottom: 0; }
 #rev-dod.up,    #rev-vs-avg.up    { color: #4ade80; }
 #rev-dod.down,  #rev-vs-avg.down  { color: #fb7185; }
 
+/* ───── ニューストピック (関西 / 全国) ───────────────────── */
+.news-card {
+  position: relative;
+  border-color: rgba(34, 211, 238, 0.18);
+  background: linear-gradient(180deg, rgba(12, 18, 36, 0.85), rgba(10, 14, 26, 0.95));
+}
+.news-card[data-stream="kansai"] {
+  border-color: rgba(250, 204, 21, 0.22);
+  background:
+    radial-gradient(700px 160px at 0% -10%, rgba(250, 204, 21, 0.10), transparent 70%),
+    linear-gradient(180deg, rgba(20, 18, 8, 0.85), rgba(10, 14, 26, 0.95));
+}
+
+.news-pill {
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 0.6rem; font-weight: 800; letter-spacing: 0.18em;
+  padding: 0.22rem 0.55rem; border-radius: 9999px;
+  white-space: nowrap;
+}
+.news-pill-kansai {
+  background: rgba(250, 204, 21, 0.18);
+  color: #facc15;
+  box-shadow: inset 0 0 0 1px rgba(250, 204, 21, 0.40);
+}
+.news-pill-zenkoku {
+  background: rgba(34, 211, 238, 0.15);
+  color: #7df9ff;
+  box-shadow: inset 0 0 0 1px rgba(34, 211, 238, 0.40);
+}
+
+.news-list {
+  list-style: none;
+  margin: 0;
+  padding: 0.2rem 1rem 0.85rem;
+  display: flex; flex-direction: column; gap: 0.15rem;
+  max-height: 300px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(148,163,184,0.30) transparent;
+}
+@media (min-width: 1024px) {
+  .news-list { max-height: 240px; padding: 0.15rem 0.85rem 0.7rem; }
+}
+.news-list::-webkit-scrollbar { width: 5px; }
+.news-list::-webkit-scrollbar-track { background: transparent; }
+.news-list::-webkit-scrollbar-thumb { background: rgba(148,163,184,0.30); border-radius: 999px; }
+
+.news-item {
+  border-bottom: 1px solid rgba(255,255,255,0.04);
+  animation: news-in 0.4s ease-out backwards;
+}
+.news-item:last-child { border-bottom: none; }
+@keyframes news-in {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.news-link {
+  display: flex; flex-direction: column; gap: 0.15rem;
+  padding: 0.45rem 0.4rem;
+  border-radius: 0.4rem;
+  text-decoration: none;
+  transition: background 0.15s ease, transform 0.15s ease;
+}
+.news-link:hover {
+  background: rgba(255,255,255,0.04);
+  transform: translateX(2px);
+}
+.news-card[data-stream="kansai"] .news-link:hover { background: rgba(250, 204, 21, 0.06); }
+.news-card[data-stream="zenkoku"] .news-link:hover { background: rgba(34, 211, 238, 0.05); }
+
+.news-title {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #e2e8f0;
+  line-height: 1.3;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.news-card[data-stream="kansai"] .news-link:hover .news-title { color: #fef9c3; }
+.news-card[data-stream="zenkoku"] .news-link:hover .news-title { color: #7df9ff; }
+
+.news-meta {
+  display: flex; align-items: center; gap: 0.35rem;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 0.6rem;
+  color: #64748b;
+}
+.news-source { color: #94a3b8; font-weight: 600; }
+.news-sep { opacity: 0.5; }
+.news-time { color: #475569; }
+
+.news-loading, .news-empty {
+  list-style: none;
+  padding: 0.6rem 0.4rem;
+  font-size: 0.7rem;
+  color: #475569;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  text-align: center;
+}
+.news-empty { color: #fb7185; opacity: 0.7; }
+
 /* ───── TSO 需給モニタ (9 エリア) ──────────────────────────── */
 .tso-card {
   position: relative;

@@ -1,6 +1,6 @@
 // 描画レイヤ。Chart.js + DOM 操作。
 
-import { AREAS, SLOT_LABELS } from './config.js?v=2026.04.30.17';
+import { AREAS, SLOT_LABELS } from './config.js?v=2026.04.30.18';
 
 // ───── ユーティリティ ──────────────────────────────────────────────
 
@@ -893,6 +893,66 @@ export function renderRevenue(rev, plant) {
       },
     });
   }
+}
+
+// ───── ニューストピック (関西 / 全国) ────────────────────────
+
+function fmtRelative(ts) {
+  if (!ts || !Number.isFinite(ts)) return '';
+  const diff = Math.max(0, Date.now() - ts);
+  if (diff < 60_000)       return `${Math.floor(diff / 1000)} 秒前`;
+  if (diff < 3_600_000)    return `${Math.floor(diff / 60_000)} 分前`;
+  if (diff < 86_400_000)   return `${Math.floor(diff / 3_600_000)} 時間前`;
+  return `${Math.floor(diff / 86_400_000)} 日前`;
+}
+
+function renderNewsList(listId, items) {
+  const ul = document.getElementById(listId);
+  if (!ul) return;
+  if (!items || !items.length) {
+    ul.innerHTML = '<li class="news-empty">取得できませんでした</li>';
+    return;
+  }
+  ul.innerHTML = '';
+  items.slice(0, 12).forEach((it, i) => {
+    const li = el('li', 'news-item');
+    li.style.animationDelay = `${i * 30}ms`;
+    const a = el('a', 'news-link');
+    a.href = it.link || '#';
+    a.target = '_blank';
+    a.rel = 'noreferrer noopener';
+    a.innerHTML = `
+      <span class="news-title">${escapeHtml(it.title || '—')}</span>
+      <span class="news-meta">
+        <span class="news-source">${escapeHtml(it.source || '')}</span>
+        <span class="news-sep">·</span>
+        <span class="news-time">${fmtRelative(it.ts)}</span>
+      </span>`;
+    li.appendChild(a);
+    ul.appendChild(li);
+  });
+}
+
+function escapeHtml(s) {
+  return String(s)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+
+export function renderNews(news) {
+  if (!news) return;
+  renderNewsList('news-kansai-list',  news.kansai);
+  renderNewsList('news-zenkoku-list', news.zenkoku);
+
+  const ksMeta = document.getElementById('news-kansai-meta');
+  const znMeta = document.getElementById('news-zenkoku-meta');
+  const stamp = news.updatedAt ? fmtRelative(new Date(news.updatedAt).getTime()) : '—';
+  if (ksMeta) ksMeta.textContent = news.kansaiOk
+    ? `Google ニュース · ${news.kansai.length}件 · 取得 ${stamp}`
+    : 'Google ニュースへ接続できず';
+  if (znMeta) znMeta.textContent = news.zenkokuOk
+    ? `Google ニュース · ${news.zenkoku.length}件 · 取得 ${stamp}`
+    : 'Google ニュースへ接続できず';
 }
 
 // ───── TSO 需給モニタ (9 エリア) ──────────────────────────────

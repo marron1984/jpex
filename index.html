@@ -31,7 +31,7 @@
       },
     };
   </script>
-  <link rel="stylesheet" href="assets/css/styles.css?v=2026.04.30.17" />
+  <link rel="stylesheet" href="assets/css/styles.css?v=2026.04.30.18" />
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
 </head>
 <body class="bg-ink-950 text-slate-100 min-h-screen antialiased">
@@ -158,6 +158,39 @@
               </div>
             </div>
           </div>
+        </div>
+      </section>
+
+      <!-- 電力ニューストピック (左: 関西 / 右: 全国) — Hero 直下 -->
+      <section id="news-panel" class="grid grid-cols-1 md:grid-cols-2 gap-3">
+        <div class="card news-card" data-stream="kansai">
+          <div class="card-head">
+            <div>
+              <h2 class="card-title">関西エリア ニュース
+                <span class="card-subtitle">電力 / JEPX 関西</span>
+              </h2>
+              <p class="card-meta" id="news-kansai-meta">—</p>
+            </div>
+            <span class="news-pill news-pill-kansai">KANSAI</span>
+          </div>
+          <ul class="news-list" id="news-kansai-list">
+            <li class="news-loading">loading…</li>
+          </ul>
+        </div>
+
+        <div class="card news-card" data-stream="zenkoku">
+          <div class="card-head">
+            <div>
+              <h2 class="card-title">全国 電力ニュース
+                <span class="card-subtitle">市場 / 政策 / FIT・FIP</span>
+              </h2>
+              <p class="card-meta" id="news-zenkoku-meta">—</p>
+            </div>
+            <span class="news-pill news-pill-zenkoku">ALL</span>
+          </div>
+          <ul class="news-list" id="news-zenkoku-list">
+            <li class="news-loading">loading…</li>
+          </ul>
         </div>
       </section>
 
@@ -494,6 +527,6 @@
     </div>
   </main>
 
-  <script type="module" src="assets/js/app.js?v=2026.04.30.17"></script>
+  <script type="module" src="assets/js/app.js?v=2026.04.30.18"></script>
 </body>
 </html>
