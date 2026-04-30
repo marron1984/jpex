@@ -45,16 +45,19 @@ body {
 }
 .card-head {
   display: flex; align-items: flex-start; justify-content: space-between; gap: 0.75rem;
-  padding: 1rem 1.25rem 0.75rem;
+  padding: 0.85rem 1rem 0.6rem;
   flex-wrap: wrap;
 }
+@media (min-width: 1280px) {
+  .card-head { padding: 0.7rem 0.95rem 0.55rem; }
+}
 .card-title {
-  font-size: 0.95rem; font-weight: 700; letter-spacing: -0.01em;
+  font-size: 0.92rem; font-weight: 700; letter-spacing: -0.01em;
 }
 .card-subtitle {
-  font-size: 0.7rem; font-weight: 500; color: #94a3b8; margin-left: 0.4rem;
+  font-size: 0.68rem; font-weight: 500; color: #94a3b8; margin-left: 0.4rem;
 }
-.card-meta { font-size: 0.7rem; color: #64748b; margin-top: 0.15rem; }
+.card-meta { font-size: 0.68rem; color: #64748b; margin-top: 0.15rem; }
 
 /* KPI */
 .kpi {
@@ -652,11 +655,15 @@ body { padding-top: 36px; padding-bottom: 0; }
 .plant-status .dot { width: 7px; height: 7px; border-radius: 50%; background: #4ade80; box-shadow: 0 0 10px #4ade80; animation: live-blink 1.4s ease-in-out infinite; }
 
 .plant-grid {
-  display: grid; grid-template-columns: minmax(280px, 0.9fr) 1.6fr; gap: 1rem;
-  padding: 0.4rem 1.25rem 1.1rem;
+  display: grid; grid-template-columns: minmax(240px, 0.85fr) 1.55fr; gap: 0.85rem;
+  padding: 0.4rem 1rem 0.95rem;
   position: relative; z-index: 1;
 }
 @media (max-width: 1000px) { .plant-grid { grid-template-columns: 1fr; } }
+/* 2xl で plant + revenue が横並びになると半幅に圧迫されるので stats を縦長型に */
+@media (min-width: 1536px) and (max-width: 1799px) {
+  .plant-grid { grid-template-columns: 1fr; }
+}
 
 .plant-stats {
   display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.5rem;
@@ -872,11 +879,14 @@ body { padding-top: 36px; padding-bottom: 0; }
 .rev-pill-spot .dot.off { background: #94a3b8; box-shadow: none; animation: none; }
 
 .revenue-grid {
-  display: grid; grid-template-columns: minmax(280px, 0.9fr) 1.6fr; gap: 1rem;
-  padding: 0.4rem 1.25rem 1.1rem;
+  display: grid; grid-template-columns: minmax(240px, 0.85fr) 1.55fr; gap: 0.85rem;
+  padding: 0.4rem 1rem 0.95rem;
   position: relative; z-index: 1;
 }
 @media (max-width: 1000px) { .revenue-grid { grid-template-columns: 1fr; } }
+@media (min-width: 1536px) and (max-width: 1799px) {
+  .revenue-grid { grid-template-columns: 1fr; }
+}
 
 .rev-stats {
   display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.5rem;
@@ -988,10 +998,12 @@ body { padding-top: 36px; padding-bottom: 0; }
 .tso-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 0.6rem;
-  padding: 0.4rem 1.25rem 1.1rem;
+  gap: 0.5rem;
+  padding: 0.35rem 1rem 0.9rem;
 }
 @media (min-width: 1100px) { .tso-grid { grid-template-columns: repeat(5, 1fr); } }
+/* PC ワイド: 9 エリア 1 行に収める */
+@media (min-width: 1500px) { .tso-grid { grid-template-columns: repeat(9, 1fr); } }
 @media (max-width: 700px)  { .tso-grid { grid-template-columns: repeat(2, 1fr); } }
 
 .tso-cell {
