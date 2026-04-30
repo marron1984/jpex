@@ -142,7 +142,13 @@ export function renderKpis(metrics) {
 let spotChart = null;
 export function renderSpotChart(records, { range = 'today', activeAreas = ['system', 'tokyo'] } = {}) {
   const canvas = document.getElementById('spot-chart');
-  if (!canvas || !records.length) return;
+  if (!canvas) return;
+  if (!records || !records.length) {
+    if (spotChart) { spotChart.destroy(); spotChart = null; }
+    drawEmptyState(canvas, 'スポットデータなし');
+    document.getElementById('spot-meta').textContent = '—';
+    return;
+  }
 
   // 日付フィルタ
   const dates = [...new Set(records.map(r => r.date))].sort();
@@ -176,6 +182,10 @@ export function renderSpotChart(records, { range = 'today', activeAreas = ['syst
   document.getElementById('spot-meta').textContent =
     `${pickDates[0]} 〜 ${pickDates[pickDates.length - 1]} · ${subset.length} コマ`;
 
+  if (typeof Chart === 'undefined') {
+    drawEmptyState(canvas, 'Chart.js のロードに失敗 (CDN ブロック?)');
+    return;
+  }
   if (spotChart) spotChart.destroy();
   spotChart = new Chart(canvas, {
     type: 'line',
@@ -273,10 +283,11 @@ let intradayChart = null;
 export function renderIntradayChart(records) {
   const canvas = document.getElementById('intraday-chart');
   if (!canvas) return;
-  if (!records.length) {
+  if (!records || !records.length) {
     document.getElementById('intraday-meta').textContent = 'データなし';
     document.getElementById('intraday-latest').textContent = '—';
     if (intradayChart) { intradayChart.destroy(); intradayChart = null; }
+    drawEmptyState(canvas, '時間前データなし');
     return;
   }
 
@@ -296,6 +307,10 @@ export function renderIntradayChart(records) {
     datasets.push({ label: '安値', data: todayRows.map(r => r.low),  borderColor: '#4ade80', borderDash: [4, 3], borderWidth: 1.2 });
   }
 
+  if (typeof Chart === 'undefined') {
+    drawEmptyState(canvas, 'Chart.js のロードに失敗 (CDN ブロック?)');
+    return;
+  }
   if (intradayChart) intradayChart.destroy();
   intradayChart = new Chart(canvas, {
     type: 'line',
@@ -356,9 +371,10 @@ export function renderFip(records) {
   const areasRoot = document.getElementById('fip-areas');
   clear(areasRoot);
 
-  if (!records.length) {
+  if (!records || !records.length) {
     meta.textContent = 'データなし';
     if (fipChart) { fipChart.destroy(); fipChart = null; }
+    drawEmptyState(canvas, 'FIP データなし');
     return;
   }
 
@@ -373,6 +389,10 @@ export function renderFip(records) {
 
   meta.textContent = `${records.length} 期間`;
 
+  if (typeof Chart === 'undefined') {
+    drawEmptyState(canvas, 'Chart.js のロードに失敗 (CDN ブロック?)');
+    return;
+  }
   if (fipChart) fipChart.destroy();
   fipChart = new Chart(canvas, {
     type: 'line',
@@ -411,4 +431,33 @@ export function setStatus({ updatedAt, line, state }) {
 
 export function setRefreshing(on) {
   document.getElementById('refresh-btn').classList.toggle('spinning', on);
+}
+
+export function setDemoMode(on, marketKeys = []) {
+  const badge = document.getElementById('demo-badge');
+  if (!badge) return;
+  if (on) {
+    badge.classList.remove('hidden');
+    badge.classList.add('flex');
+    badge.title = `デモデータ表示中: ${marketKeys.join(', ')}`;
+  } else {
+    badge.classList.add('hidden');
+    badge.classList.remove('flex');
+  }
+}
+
+function drawEmptyState(canvas, message) {
+  const ctx = canvas.getContext('2d');
+  const dpr = window.devicePixelRatio || 1;
+  const rect = canvas.getBoundingClientRect();
+  if (rect.width === 0 || rect.height === 0) return;
+  canvas.width = rect.width * dpr;
+  canvas.height = rect.height * dpr;
+  ctx.scale(dpr, dpr);
+  ctx.clearRect(0, 0, rect.width, rect.height);
+  ctx.fillStyle = '#475569';
+  ctx.font = "500 13px " + CHART_FONT;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(message, rect.width / 2, rect.height / 2);
 }

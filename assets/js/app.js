@@ -4,15 +4,17 @@ import { REFRESH_MS, SOURCES, AREAS, fiscalYear } from './config.js';
 import { fetchCsv } from './fetcher.js';
 import { parseCsvWithHeader } from './csv.js';
 import { parseSpot, parseIntraday, parseForward, parseBaseload, parseFip } from './markets.js';
+import { demoSpot, demoIntraday, demoForward, demoBaseload, demoFip } from './demo.js';
 import {
   renderKpis, renderSpotChart, renderAreaToggles, renderAreaMini,
   renderProfile, renderIntradayChart, renderForward, renderBaseload,
-  renderFip, setStatus, setRefreshing,
+  renderFip, setStatus, setRefreshing, setDemoMode,
 } from './ui.js';
 
 // ───── 状態 ─────────────────────────────────────────────────────
 const state = {
   spot: [], intraday: [], forward: [], baseload: [], fip: [],
+  isDemo: { spot: false, intraday: false, forward: false, baseload: false, fip: false },
   spotRange: 'today',
   spotAreas: new Set(['system', 'tokyo']),
   errors: {},
@@ -110,7 +112,9 @@ async function loadOne(key, parser, signal) {
     const { text, sourceUrl } = await fetchCsv(urls, { signal });
     const parsed = parseCsvWithHeader(text);
     const data = parser(parsed);
+    if (!data.length) throw new Error('CSV パース結果が 0 件 (列レイアウト変更?)');
     state[key] = data;
+    state.isDemo[key] = false;
     state.errors[key] = null;
     return { key, ok: true, count: data.length, sourceUrl };
   } catch (e) {
@@ -137,20 +141,34 @@ async function loadAll() {
   state.inFlight = null;
   setRefreshing(false);
 
-  render();
-
   const ok = results.filter(r => r.ok);
   const ng = results.filter(r => !r.ok);
+
+  // 失敗した市場はデモデータで埋める (UI を必ず描画)
+  for (const r of ng) {
+    const fallback = DEMO_FALLBACK[r.key];
+    if (fallback) {
+      state[r.key] = fallback();
+      state.isDemo[r.key] = true;
+    }
+  }
+  const demoUsed = Object.entries(state.isDemo).filter(([, v]) => v).map(([k]) => k);
+  setDemoMode(demoUsed.length > 0, demoUsed);
+
+  render();
+
   const labels = (arr) => arr.map(r => SOURCES[r.key].label).join(' / ');
   let line = '';
   let stateTag = 'live';
   if (ok.length === 5) {
     line = `全 5 市場を取得 (${ok.map(r => `${SOURCES[r.key].label}: ${r.count}件`).join(' · ')})`;
   } else if (ok.length > 0) {
-    line = `取得成功: ${labels(ok)} / 失敗: ${labels(ng)}`;
+    line = `取得成功: ${labels(ok)} / 失敗 (デモ表示): ${labels(ng)}`;
     stateTag = 'stale';
   } else {
-    line = `データ取得に失敗しました。CSV エンドポイントが変更された可能性があります。コンソールを確認してください。`;
+    line = isFileProtocol()
+      ? `file:// では fetch がブロックされます。ローカルサーバ (例: python3 -m http.server) 経由で開いてください。デモデータを表示中。`
+      : `JEPX への接続に失敗。CORS / URL 変更の可能性があります。デモデータを表示中。`;
     stateTag = 'error';
   }
   setStatus({ updatedAt: Date.now(), line, state: stateTag });
@@ -159,6 +177,18 @@ async function loadAll() {
   for (const r of ng) {
     console.warn(`[JEPX:${r.key}]`, r.error?.message || r.error, r.error?.detail);
   }
+}
+
+const DEMO_FALLBACK = {
+  spot: demoSpot,
+  intraday: demoIntraday,
+  forward: demoForward,
+  baseload: demoBaseload,
+  fip: demoFip,
+};
+
+function isFileProtocol() {
+  return typeof location !== 'undefined' && location.protocol === 'file:';
 }
 
 // ───── イベント ─────────────────────────────────────────────────
@@ -176,6 +206,17 @@ document.querySelectorAll('[data-spot-range]').forEach(btn => {
 
 // ───── 起動 ─────────────────────────────────────────────────────
 
+// 1) まずデモデータで即座に描画 (空チャート回避)
+state.spot     = demoSpot();      state.isDemo.spot     = true;
+state.intraday = demoIntraday();  state.isDemo.intraday = true;
+state.forward  = demoForward();   state.isDemo.forward  = true;
+state.baseload = demoBaseload();  state.isDemo.baseload = true;
+state.fip      = demoFip();       state.isDemo.fip      = true;
+setDemoMode(true, ['spot', 'intraday', 'forward', 'baseload', 'fip']);
+setStatus({ updatedAt: Date.now(), line: 'デモデータ表示中 — JEPX に接続中…', state: 'stale' });
+render();
+
+// 2) 実データを取得しに行く (成功した市場だけ上書き)
 loadAll();
 setInterval(loadAll, REFRESH_MS);
 
