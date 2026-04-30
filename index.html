@@ -1,0 +1,206 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>JEPX Live ⚡ 日本卸電力取引所マーケットダッシュボード</title>
+  <meta name="description" content="日本卸電力取引所 (JEPX) のスポット・時間前・先渡・ベースロード・FIP 5市場をリアルタイム表示" />
+  <link rel="preconnect" href="https://www.jepx.jp" />
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ctext y='52' font-size='52'%3E%E2%9A%A1%3C/text%3E%3C/svg%3E" />
+  <script src="https://cdn.tailwindcss.com?plugins=forms,typography"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'Hiragino Sans', 'Noto Sans JP', 'system-ui', 'sans-serif'],
+            mono: ['JetBrains Mono', 'SF Mono', 'Menlo', 'monospace'],
+          },
+          colors: {
+            ink: { 950: '#06080f', 900: '#0a0e1a', 800: '#10172a', 700: '#1a2340', 600: '#2a3556' },
+            volt: { 400: '#7df9ff', 500: '#22d3ee', 600: '#0ea5b7' },
+            sun:  { 400: '#fbbf24', 500: '#f59e0b' },
+            rose: { 400: '#fb7185', 500: '#f43f5e' },
+            mint: { 400: '#4ade80', 500: '#22c55e' },
+          },
+          boxShadow: {
+            'glow-volt': '0 0 30px -5px rgba(34, 211, 238, 0.55)',
+            'inner-card': 'inset 0 1px 0 0 rgba(255,255,255,0.04), inset 0 0 0 1px rgba(255,255,255,0.04)',
+          },
+        },
+      },
+    };
+  </script>
+  <link rel="stylesheet" href="assets/css/styles.css" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+</head>
+<body class="bg-ink-950 text-slate-100 min-h-screen antialiased">
+  <div class="bg-grid"></div>
+  <div class="bg-glow"></div>
+
+  <header class="relative z-10 px-6 lg:px-10 pt-6 pb-4">
+    <div class="max-w-[1600px] mx-auto flex flex-wrap items-center gap-4">
+      <div class="flex items-center gap-3">
+        <div class="size-10 rounded-xl bg-gradient-to-br from-volt-400 to-volt-600 grid place-items-center shadow-glow-volt">
+          <span class="text-ink-950 text-xl font-black">⚡</span>
+        </div>
+        <div>
+          <h1 class="text-xl lg:text-2xl font-black tracking-tight">
+            JEPX <span class="text-volt-400">LIVE</span>
+          </h1>
+          <p class="text-xs text-slate-400 -mt-0.5">日本卸電力取引所マーケットダッシュボード</p>
+        </div>
+      </div>
+
+      <div class="ml-auto flex items-center gap-3 text-xs">
+        <div class="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-full bg-ink-800/60 ring-1 ring-white/5">
+          <span class="size-2 rounded-full bg-mint-400 animate-pulse" id="live-dot"></span>
+          <span class="text-slate-300">10 分自動更新</span>
+        </div>
+        <div class="flex items-center gap-2 px-3 py-1.5 rounded-full bg-ink-800/60 ring-1 ring-white/5 font-mono">
+          <span class="text-slate-400">UPDATED</span>
+          <span class="text-volt-400" id="last-updated">—</span>
+        </div>
+        <button id="refresh-btn" class="px-3 py-1.5 rounded-full bg-volt-500/15 hover:bg-volt-500/25 ring-1 ring-volt-400/40 text-volt-400 transition flex items-center gap-1.5">
+          <svg class="size-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 12a9 9 0 1 1-3.5-7.1M21 4v5h-5"/></svg>
+          <span>更新</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main class="relative z-10 px-6 lg:px-10 pb-16">
+    <div class="max-w-[1600px] mx-auto space-y-6">
+
+      <!-- KPI ROW -->
+      <section id="kpi-row" class="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-3">
+        <!-- KPI cards injected by JS -->
+      </section>
+
+      <!-- SPOT MAIN CHART -->
+      <section class="card">
+        <div class="card-head">
+          <div>
+            <h2 class="card-title">スポット市場 <span class="card-subtitle">Day-ahead Spot · ¥/kWh · 30分コマ</span></h2>
+            <p class="card-meta" id="spot-meta">—</p>
+          </div>
+          <div class="flex flex-wrap gap-2 items-center">
+            <div class="flex items-center gap-1 text-[11px]" id="spot-area-toggle">
+              <!-- area toggles injected -->
+            </div>
+            <div class="ml-auto md:ml-2 flex items-center gap-1 rounded-full bg-ink-800/70 ring-1 ring-white/5 p-0.5 text-[11px]">
+              <button class="seg-btn seg-active" data-spot-range="today">今日</button>
+              <button class="seg-btn" data-spot-range="yesterday">昨日</button>
+              <button class="seg-btn" data-spot-range="week">7日間</button>
+            </div>
+          </div>
+        </div>
+        <div class="relative h-[340px] md:h-[400px] px-2">
+          <canvas id="spot-chart"></canvas>
+        </div>
+        <div class="grid grid-cols-3 md:grid-cols-9 gap-2 px-2 pb-2 pt-3" id="area-prices">
+          <!-- area mini-cards injected -->
+        </div>
+      </section>
+
+      <!-- INTRADAY + FORECAST/SUMMARY -->
+      <section class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div class="card lg:col-span-2">
+          <div class="card-head">
+            <div>
+              <h2 class="card-title">時間前市場 <span class="card-subtitle">Intraday · 約定加重平均価格</span></h2>
+              <p class="card-meta" id="intraday-meta">—</p>
+            </div>
+            <div class="flex items-center gap-2 text-[11px]">
+              <span class="badge badge-volt" id="intraday-latest">—</span>
+            </div>
+          </div>
+          <div class="relative h-[260px] md:h-[300px] px-2">
+            <canvas id="intraday-chart"></canvas>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-head">
+            <div>
+              <h2 class="card-title">日内サマリー <span class="card-subtitle">Today's Profile</span></h2>
+              <p class="card-meta">スポット システム価格</p>
+            </div>
+          </div>
+          <div class="p-2 grid grid-cols-2 gap-3" id="profile-grid">
+            <!-- profile cards -->
+          </div>
+        </div>
+      </section>
+
+      <!-- FORWARD + BASELOAD -->
+      <section class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div class="card">
+          <div class="card-head">
+            <div>
+              <h2 class="card-title">先渡市場 <span class="card-subtitle">Forward Market</span></h2>
+              <p class="card-meta" id="forward-meta">—</p>
+            </div>
+          </div>
+          <div class="overflow-x-auto px-2 pb-3">
+            <table class="data-table" id="forward-table">
+              <thead>
+                <tr>
+                  <th>商品</th><th>受渡期間</th><th class="text-right">24h 平均</th>
+                  <th class="text-right">昼間</th><th class="text-right">約定量</th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-head">
+            <div>
+              <h2 class="card-title">ベースロード市場 <span class="card-subtitle">Baseload Market</span></h2>
+              <p class="card-meta" id="baseload-meta">—</p>
+            </div>
+          </div>
+          <div class="overflow-x-auto px-2 pb-3">
+            <table class="data-table" id="baseload-table">
+              <thead>
+                <tr>
+                  <th>年度</th><th>エリア</th><th class="text-right">約定価格</th>
+                  <th class="text-right">約定量</th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- FIP -->
+      <section class="card">
+        <div class="card-head">
+          <div>
+            <h2 class="card-title">FIP参照価格 <span class="card-subtitle">Feed-in Premium · Reference Price</span></h2>
+            <p class="card-meta" id="fip-meta">—</p>
+          </div>
+        </div>
+        <div class="relative h-[260px] md:h-[300px] px-2">
+          <canvas id="fip-chart"></canvas>
+        </div>
+        <div class="grid grid-cols-3 md:grid-cols-9 gap-2 px-2 pb-3 pt-3" id="fip-areas">
+          <!-- fip area mini-cards -->
+        </div>
+      </section>
+
+      <!-- STATUS -->
+      <section id="status-bar" class="text-[11px] text-slate-500 flex flex-wrap items-center gap-x-4 gap-y-1">
+        <span>データソース: <a class="text-volt-400 hover:underline" href="https://www.jepx.jp/electricpower/market-data/spot/" target="_blank" rel="noreferrer">JEPX 市場情報</a></span>
+        <span class="opacity-40">|</span>
+        <span id="status-line">準備中…</span>
+      </section>
+    </div>
+  </main>
+
+  <script type="module" src="assets/js/app.js"></script>
+</body>
+</html>
