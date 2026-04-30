@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-04-30T08:31:46.039Z",
+  "updatedAt": "2026-04-30T08:35:16.206Z",
   "runner": "github-actions",
   "markets": {
     "spot": {
@@ -13,29 +13,29 @@
       "ok": true,
       "url": "https://www.jepx.jp/market/excel/im_trade_summary_2026.csv",
       "via": "pattern",
-      "bytes": 76471,
+      "bytes": 76526,
       "attempts": 3
     },
     "forward": {
       "ok": false,
       "attempts": 14,
       "lastError": "status 404",
-      "keptPrevious": true,
-      "previousAt": "2026-04-30T08:03:10.505Z"
+      "keptPrevious": false,
+      "previousAt": null
     },
     "baseload": {
       "ok": false,
       "attempts": 10,
       "lastError": "status 404",
-      "keptPrevious": true,
-      "previousAt": "2026-04-30T08:03:10.505Z"
+      "keptPrevious": false,
+      "previousAt": null
     },
     "fip": {
       "ok": false,
       "attempts": 20,
       "lastError": "status 404",
-      "keptPrevious": true,
-      "previousAt": "2026-04-30T08:03:10.505Z"
+      "keptPrevious": false,
+      "previousAt": null
     }
   }
 }
