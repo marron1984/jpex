@@ -116,6 +116,17 @@ const FETCH_HEADERS = {
   'Accept-Language': 'ja,en;q=0.8',
 };
 
+// JEPX は CSV が無い URL でも 200 で landing/エラーページ HTML を返すことがある。
+// content-type と先頭バイトで CSV か否かを判別する。
+function isLikelyCsv(buf, contentType) {
+  const ct = String(contentType || '').toLowerCase();
+  if (ct.startsWith('text/html')) return false;
+  const head = new TextDecoder('utf-8', { fatal: false }).decode(buf.slice(0, 512));
+  if (/^\s*<\!?(?:doctype|html)/i.test(head)) return false;
+  if (/<\s*(html|body|head|meta|script)\b/i.test(head)) return false;
+  return /[,\n]/.test(head);
+}
+
 async function tryUrl(url, opts = {}) {
   const t0 = Date.now();
   try {
@@ -126,12 +137,16 @@ async function tryUrl(url, opts = {}) {
     });
     const ms = Date.now() - t0;
     if (!r.ok) return { ok: false, status: r.status, ms };
+    const ct = r.headers.get('content-type') || 'text/csv';
     if (opts.headOnly) {
-      return { ok: true, status: r.status, ms, contentType: r.headers.get('content-type') || 'text/csv' };
+      // HEAD 風モード (バイト無し): content-type で text/html を弾く
+      if (ct.toLowerCase().startsWith('text/html')) return { ok: false, status: 200, reason: 'html landing', ms };
+      return { ok: true, status: r.status, ms, contentType: ct };
     }
     const buf = await r.arrayBuffer();
     if (buf.byteLength < 64) return { ok: false, status: 204, reason: 'too small', bytes: buf.byteLength, ms };
-    return { ok: true, status: r.status, buf, contentType: r.headers.get('content-type') || 'text/csv', bytes: buf.byteLength, ms };
+    if (!isLikelyCsv(buf, ct))  return { ok: false, status: 200,  reason: 'html landing (not csv)', bytes: buf.byteLength, ms };
+    return { ok: true, status: r.status, buf, contentType: ct, bytes: buf.byteLength, ms };
   } catch (e) {
     return { ok: false, status: 0, reason: e?.message || String(e), ms: Date.now() - t0 };
   }

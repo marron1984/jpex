@@ -116,15 +116,30 @@ function expandWithBackfill(p) {
 }
 function abs(href, base) { try { return new URL(href, base).href; } catch { return href; } }
 
+// JEPX は CSV が無い URL でも 200 で landing/エラーページ HTML を返してくることがある
+// (forward_{YEAR}.csv 等)。content-type と先頭バイトで CSV か否かを判別する。
+function isLikelyCsv(buf, contentType) {
+  const ct = String(contentType || '').toLowerCase();
+  if (ct.startsWith('text/html')) return false;
+  // 先頭 512 byte で目視判定
+  const head = buf.slice(0, 512).toString('utf-8');
+  if (/^\s*<\!?(?:doctype|html)/i.test(head)) return false;
+  if (/<\s*(html|body|head|meta|script)\b/i.test(head)) return false;
+  // 改行 or カンマがあれば CSV 候補
+  return /[,\n]/.test(head);
+}
+
 async function tryUrl(url, { timeoutMs = 12_000 } = {}) {
   const t0 = Date.now();
   try {
     const r = await fetch(url, { headers: HEADERS, redirect: 'follow', signal: AbortSignal.timeout(timeoutMs) });
     const ms = Date.now() - t0;
     if (!r.ok) return { ok: false, status: r.status, ms };
+    const ct = r.headers.get('content-type') || 'text/csv';
     const buf = Buffer.from(await r.arrayBuffer());
     if (buf.byteLength < 64) return { ok: false, status: 204, reason: 'too small', bytes: buf.byteLength, ms };
-    return { ok: true, status: r.status, buf, bytes: buf.byteLength, ms, contentType: r.headers.get('content-type') || 'text/csv' };
+    if (!isLikelyCsv(buf, ct))  return { ok: false, status: 200,  reason: 'html landing (not csv)', bytes: buf.byteLength, ms };
+    return { ok: true, status: r.status, buf, bytes: buf.byteLength, ms, contentType: ct };
   } catch (e) {
     return { ok: false, status: 0, reason: e?.message || String(e), ms: Date.now() - t0 };
   }
