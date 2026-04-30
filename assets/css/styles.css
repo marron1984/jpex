@@ -588,6 +588,39 @@ body { padding-top: 36px; padding-bottom: 0; }
 }
 .hero-spark-stat { color: #facc15; font-family: 'JetBrains Mono', ui-monospace, monospace; }
 
+/* PC (lg+) 高密度モード: hero 全体を圧縮して 1 画面に多くのアイテムを収める */
+@media (min-width: 1024px) {
+  .hero-grid       { padding: 0.85rem 1.1rem 1rem; gap: 1rem; }
+  .hero-price      { font-size: clamp(2rem, 3.4vw, 2.8rem); }
+  .hero-price-block { margin-top: 0.4rem; }
+  .hero-price-sub  { margin-top: 0.25rem; }
+  .hero-delta      { font-size: 0.85rem; padding: 0.15rem 0.45rem; }
+  .hero-delta-abs  { font-size: 0.78rem; }
+  .tag-name        { font-size: 0.85rem; }
+  .hero-tape       { height: 28px; margin-top: 0.55rem; padding: 3px 5px; }
+  .hero-volbars    { gap: 0.3rem; margin-top: 0.55rem; }
+  .volrow          { grid-template-columns: 92px 1fr 78px; gap: 0.5rem; font-size: 0.66rem; }
+  .volrow-bar      { height: 6px; }
+  .hero-right      { gap: 0.55rem; }
+  .hero-clock      { padding: 0.35rem 0.65rem; }
+  .clock-time      { font-size: 1.2rem; }
+  .clock-slot      { font-size: 0.62rem; }
+  .hero-stats .stat   { padding: 0.32rem 0.5rem; }
+  .hero-stats .stat span { font-size: 0.55rem; }
+  .hero-stats .stat b    { font-size: 0.82rem; }
+  .hero-range      { gap: 0.2rem; }
+  .hero-range-track { height: 6px; }
+  .hero-range-marker { width: 11px; height: 11px; }
+  .hero-range-labels { font-size: 0.62rem; }
+  .hero-spark-wrap { height: 60px; }
+  .hero-spark-label { font-size: 0.6rem; top: 2px; left: 2px; right: 2px; }
+}
+@media (min-width: 1280px) {
+  .hero-price      { font-size: clamp(1.9rem, 2.8vw, 2.5rem); }
+  .hero-spark-wrap { height: 56px; }
+  .hero-tape       { height: 24px; }
+}
+
 /* ───── PLANT CARD (奈良吉野発電所 DEMO) ────────────────────── */
 .plant-card {
   position: relative;
