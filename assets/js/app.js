@@ -1,22 +1,23 @@
 // JEPX Live — エントリーポイント
 
-import { REFRESH_MS, SOURCES, AREAS, fiscalYear } from './config.js?v=2026.04.30.2';
-import { fetchCsv } from './fetcher.js?v=2026.04.30.2';
-import { parseCsvWithHeader } from './csv.js?v=2026.04.30.2';
-import { parseSpot, parseIntraday, parseForward, parseBaseload, parseFip } from './markets.js?v=2026.04.30.2';
-import { demoSpot, demoIntraday, demoForward, demoBaseload, demoFip } from './demo.js?v=2026.04.30.2';
+import { REFRESH_MS, SOURCES, AREAS, fiscalYear } from './config.js?v=2026.04.30.3';
+import { fetchCsv } from './fetcher.js?v=2026.04.30.3';
+import { parseCsvWithHeader } from './csv.js?v=2026.04.30.3';
+import { parseSpot, parseIntraday, parseForward, parseBaseload, parseFip } from './markets.js?v=2026.04.30.3';
+import { demoSpot, demoIntraday, demoForward, demoBaseload, demoFip } from './demo.js?v=2026.04.30.3';
 import {
   renderKpis, renderSpotChart, renderAreaToggles, renderAreaMini,
   renderProfile, renderIntradayChart, renderForward, renderBaseload,
   renderFip, renderTicker, renderHero, startHeroAnimations,
-  setStatus, setRefreshing, setDemoMode,
+  setStatus, setRefreshing, setMode,
   startCountdown, resetCountdown, toggleFullscreen,
-} from './ui.js?v=2026.04.30.2';
+} from './ui.js?v=2026.04.30.3';
 
 // ───── 状態 ─────────────────────────────────────────────────────
 const state = {
   spot: [], intraday: [], forward: [], baseload: [], fip: [],
   isDemo: { spot: false, intraday: false, forward: false, baseload: false, fip: false },
+  everSucceeded: false,
   spotRange: 'today',
   spotAreas: new Set(['system', 'kansai']),
   errors: {},
@@ -29,10 +30,13 @@ function expand(urls, now = new Date()) {
   const fy = fiscalYear(now);
   const out = [];
   for (const u of urls) {
-    if (u.includes('{YEAR}')) out.push(u.replace('{YEAR}', yr));
-    if (u.includes('{FY}'))   out.push(u.replace('{FY}', fy));
+    let s = u;
+    s = s.replaceAll('{YEAR}',      String(yr));
+    s = s.replaceAll('{YEAR_PREV}', String(yr - 1));
+    s = s.replaceAll('{FY}',        String(fy));
+    s = s.replaceAll('{FY_PREV}',   String(fy - 1));
+    out.push(s);
   }
-  // 重複除去
   return [...new Set(out)];
 }
 
@@ -132,6 +136,8 @@ async function loadAll() {
   const ctrl = new AbortController();
   state.inFlight = ctrl;
   setRefreshing(true);
+  // 起動直後だけ「接続中…」表示。それ以降は直前の表示を維持
+  if (!state.everSucceeded) setMode('connecting', 'JEPX 接続中…');
   setStatus({ line: 'JEPX からデータを取得中…' });
 
   const results = await Promise.all([
@@ -148,34 +154,35 @@ async function loadAll() {
   const ok = results.filter(r => r.ok);
   const ng = results.filter(r => !r.ok);
 
-  // 失敗した市場はデモデータで埋める (UI を必ず描画)
+  // 失敗した市場のうち、本物データを一度も持っていない市場のみデモで埋める
   for (const r of ng) {
     const fallback = DEMO_FALLBACK[r.key];
-    if (fallback) {
+    if (fallback && (!state[r.key] || !state[r.key].length)) {
       state[r.key] = fallback();
       state.isDemo[r.key] = true;
     }
   }
-  const demoUsed = Object.entries(state.isDemo).filter(([, v]) => v).map(([k]) => k);
-  setDemoMode(demoUsed.length > 0, demoUsed);
+  if (ok.length) state.everSucceeded = true;
+  const demoCount = Object.values(state.isDemo).filter(Boolean).length;
 
   render();
 
   const labels = (arr) => arr.map(r => SOURCES[r.key].label).join(' / ');
-  let line = '';
-  let stateTag = 'live';
+  let line = '', mode = 'live', meta = '本番データ';
   if (ok.length === 5) {
-    line = `全 5 市場を取得 (${ok.map(r => `${SOURCES[r.key].label}: ${r.count}件`).join(' · ')})`;
+    line = `全 5 市場 LIVE (${ok.map(r => `${SOURCES[r.key].label}: ${r.count}件`).join(' · ')})`;
+    mode = 'live'; meta = `5/5 LIVE`;
   } else if (ok.length > 0) {
-    line = `取得成功: ${labels(ok)} / 失敗 (デモ表示): ${labels(ng)}`;
-    stateTag = 'stale';
+    line = `取得成功: ${labels(ok)} / 失敗: ${labels(ng)}`;
+    mode = 'partial'; meta = `${ok.length}/5 LIVE${demoCount ? ` · DEMO×${demoCount}` : ''}`;
   } else {
     line = isFileProtocol()
-      ? `file:// では fetch がブロックされます。ローカルサーバ (例: python3 -m http.server) 経由で開いてください。デモデータを表示中。`
-      : `JEPX への接続に失敗。CORS / URL 変更の可能性があります。デモデータを表示中。`;
-    stateTag = 'error';
+      ? `file:// では fetch がブロック。ローカルサーバ経由で開いてください`
+      : `JEPX への接続に失敗 (URL/CORS/ネットワーク)`;
+    mode = 'demo'; meta = 'DEMO 表示';
   }
-  setStatus({ updatedAt: Date.now(), line, state: stateTag });
+  setMode(mode, meta);
+  setStatus({ updatedAt: Date.now(), line, state: mode === 'live' ? 'live' : mode === 'partial' ? 'stale' : 'error' });
   resetCountdown(REFRESH_MS);
 
   // デバッグ用にエラー内容を console に
@@ -219,14 +226,9 @@ document.querySelectorAll('[data-spot-range]').forEach(btn => {
 
 // ───── 起動 ─────────────────────────────────────────────────────
 
-// 1) まずデモデータで即座に描画 (空チャート回避)
-state.spot     = demoSpot();      state.isDemo.spot     = true;
-state.intraday = demoIntraday();  state.isDemo.intraday = true;
-state.forward  = demoForward();   state.isDemo.forward  = true;
-state.baseload = demoBaseload();  state.isDemo.baseload = true;
-state.fip      = demoFip();       state.isDemo.fip      = true;
-setDemoMode(true, ['spot', 'intraday', 'forward', 'baseload', 'fip']);
-setStatus({ updatedAt: Date.now(), line: 'デモデータ表示中 — JEPX に接続中…', state: 'stale' });
+// 1) 起動: 「接続中」状態で空のままレンダリング (デモを既定にしない)
+setMode('connecting', 'JEPX 接続中…');
+setStatus({ line: 'JEPX 接続中…' });
 render();
 
 // 2) カウントダウンリング + Hero パネルの常時アニメーション開始

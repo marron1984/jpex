@@ -178,6 +178,47 @@ body {
 * { -webkit-tap-highlight-color: transparent; }
 canvas { cursor: crosshair; }
 
+/* ───── Mode badge (LIVE / CONNECTING / DEMO) ──────────────── */
+.mode-badge {
+  display: inline-flex; align-items: center; gap: 0.5rem;
+  padding: 0.4rem 0.75rem;
+  border-radius: 9999px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-weight: 800; letter-spacing: 0.14em; font-size: 0.66rem;
+  white-space: nowrap;
+  transition: background 0.3s ease, color 0.3s ease, box-shadow 0.3s ease;
+}
+.mode-badge .dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.mode-badge .meta { font-weight: 600; letter-spacing: 0.04em; opacity: 0.85; }
+
+.mode-live {
+  background: rgba(74, 222, 128, 0.14);
+  color: #4ade80;
+  box-shadow: inset 0 0 0 1px rgba(74,222,128,0.45), 0 0 22px -6px rgba(74,222,128,0.55);
+}
+.mode-live .dot { background: #4ade80; box-shadow: 0 0 12px #4ade80; animation: live-blink 1.2s ease-in-out infinite; }
+
+.mode-connecting {
+  background: rgba(34, 211, 238, 0.12);
+  color: #7df9ff;
+  box-shadow: inset 0 0 0 1px rgba(34, 211, 238, 0.40);
+}
+.mode-connecting .dot { background: #22d3ee; animation: live-blink 0.8s ease-in-out infinite; }
+
+.mode-partial {
+  background: rgba(250, 204, 21, 0.14);
+  color: #facc15;
+  box-shadow: inset 0 0 0 1px rgba(250, 204, 21, 0.45);
+}
+.mode-partial .dot { background: #facc15; animation: live-blink 1.5s ease-in-out infinite; }
+
+.mode-demo {
+  background: rgba(244, 63, 94, 0.14);
+  color: #fb7185;
+  box-shadow: inset 0 0 0 1px rgba(244, 63, 94, 0.45);
+}
+.mode-demo .dot { background: #f43f5e; animation: live-blink 1s ease-in-out infinite; }
+
 /* ───── Icon buttons (refresh / fullscreen) ────────────────── */
 .icon-btn {
   width: 32px; height: 32px;

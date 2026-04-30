@@ -3,8 +3,8 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>JEPX Live ⚡ 日本卸電力取引所マーケットダッシュボード</title>
-  <meta name="description" content="日本卸電力取引所 (JEPX) のスポット・時間前・先渡・ベースロード・FIP 5市場をリアルタイム表示" />
+  <title>DENDENLIVE ⚡ 日本卸電力取引所マーケットダッシュボード</title>
+  <meta name="description" content="DENDENLIVE — 日本卸電力取引所 (JEPX) のスポット・時間前・先渡・ベースロード・FIP 5市場をリアルタイム表示" />
   <link rel="preconnect" href="https://www.jepx.jp" />
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ctext y='52' font-size='52'%3E%E2%9A%A1%3C/text%3E%3C/svg%3E" />
   <script src="https://cdn.tailwindcss.com?plugins=forms,typography"></script>
@@ -31,7 +31,7 @@
       },
     };
   </script>
-  <link rel="stylesheet" href="assets/css/styles.css?v=2026.04.30.2" />
+  <link rel="stylesheet" href="assets/css/styles.css?v=2026.04.30.3" />
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
 </head>
 <body class="bg-ink-950 text-slate-100 min-h-screen antialiased">
@@ -46,16 +46,17 @@
         </div>
         <div>
           <h1 class="text-xl lg:text-2xl font-black tracking-tight">
-            JEPX <span class="text-volt-400">LIVE</span>
+            DENDEN<span class="text-volt-400">LIVE</span>
           </h1>
-          <p class="text-xs text-slate-400 -mt-0.5">日本卸電力取引所マーケットダッシュボード</p>
+          <p class="text-xs text-slate-400 -mt-0.5">JEPX 日本卸電力取引所 · マーケットダッシュボード</p>
         </div>
       </div>
 
       <div class="ml-auto flex items-center gap-3 text-xs">
-        <div id="demo-badge" class="hidden items-center gap-1.5 px-3 py-1.5 rounded-full bg-sun-500/15 ring-1 ring-sun-400/40 text-sun-400 font-bold">
-          <span class="size-2 rounded-full bg-sun-400 animate-pulse"></span>
-          <span>DEMO MODE</span>
+        <div id="mode-badge" class="mode-badge mode-connecting">
+          <span class="dot"></span>
+          <span class="label">CONNECTING</span>
+          <span class="meta" id="mode-meta">JEPX 接続中…</span>
         </div>
         <div class="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-full bg-ink-800/60 ring-1 ring-white/5">
           <span class="size-2 rounded-full bg-mint-400 animate-pulse" id="live-dot"></span>
@@ -288,6 +289,6 @@
     </div>
   </div>
 
-  <script type="module" src="assets/js/app.js?v=2026.04.30.2"></script>
+  <script type="module" src="assets/js/app.js?v=2026.04.30.3"></script>
 </body>
 </html>

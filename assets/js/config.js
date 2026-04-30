@@ -20,7 +20,7 @@ export const CORS_PROXIES = [
 ];
 
 // 各市場の CSV 候補 URL。先頭から試して取れたものを使う。
-// {YEAR} は西暦4桁、{FY} は会計年度 (4-3月) に置換される。
+// {YEAR} は西暦4桁、{YEAR_PREV} はその前の暦年、{FY} は会計年度 (4-3月)。
 export const SOURCES = {
   spot: {
     label: 'スポット市場',
@@ -28,6 +28,8 @@ export const SOURCES = {
       'https://www.jepx.jp/market/excel/spot_{YEAR}.csv',
       'https://www.jepx.jp/js/csv/spot_summary_{YEAR}.csv',
       'http://www.jepx.org/market/excel/spot_{YEAR}.csv',
+      // 年初など最新年が未公開の場合の前年フォールバック
+      'https://www.jepx.jp/market/excel/spot_{YEAR_PREV}.csv',
     ],
   },
   intraday: {
@@ -35,15 +37,19 @@ export const SOURCES = {
     urls: [
       'https://www.jepx.jp/market/excel/im_{YEAR}.csv',
       'https://www.jepx.jp/market/excel/intraday_{YEAR}.csv',
+      'https://www.jepx.jp/market/excel/im_trade_summary_{YEAR}.csv',
       'https://www.jepx.jp/js/csv/im_trade_summary_{YEAR}.csv',
+      'https://www.jepx.jp/market/excel/im_{YEAR_PREV}.csv',
     ],
   },
   forward: {
     label: '先渡市場',
     urls: [
       'https://www.jepx.jp/market/excel/forward_{FY}.csv',
+      'https://www.jepx.jp/market/excel/forward_summary_{FY}.csv',
       'https://www.jepx.jp/market/excel/forward_{YEAR}.csv',
       'https://www.jepx.jp/js/csv/forward_summary_{FY}.csv',
+      'https://www.jepx.jp/market/excel/forward_{FY_PREV}.csv',
     ],
   },
   baseload: {
@@ -51,6 +57,9 @@ export const SOURCES = {
     urls: [
       'https://www.jepx.jp/market/excel/baseload_{FY}.csv',
       'https://www.jepx.jp/market/excel/baseload_summary_{FY}.csv',
+      'https://www.jepx.jp/market/excel/baseload_auction_{FY}.csv',
+      'https://www.jepx.jp/js/csv/baseload_{FY}.csv',
+      'https://www.jepx.jp/market/excel/baseload_{FY_PREV}.csv',
     ],
   },
   fip: {
@@ -58,7 +67,9 @@ export const SOURCES = {
     urls: [
       'https://www.jepx.jp/market/excel/fip_{FY}.csv',
       'https://www.jepx.jp/market/excel/fip_reference_{FY}.csv',
+      'https://www.jepx.jp/market/excel/fip_{YEAR}.csv',
       'https://www.jepx.jp/js/csv/fip_summary_{FY}.csv',
+      'https://www.jepx.jp/market/excel/fip_{FY_PREV}.csv',
     ],
   },
 };

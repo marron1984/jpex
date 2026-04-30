@@ -1,6 +1,6 @@
 // 描画レイヤ。Chart.js + DOM 操作。
 
-import { AREAS, SLOT_LABELS } from './config.js?v=2026.04.30.2';
+import { AREAS, SLOT_LABELS } from './config.js?v=2026.04.30.3';
 
 // ───── ユーティリティ ──────────────────────────────────────────────
 
@@ -477,17 +477,19 @@ export function setRefreshing(on) {
   document.getElementById('refresh-btn').classList.toggle('spinning', on);
 }
 
-export function setDemoMode(on, marketKeys = []) {
-  const badge = document.getElementById('demo-badge');
+// 3-state status badge: 'live' | 'connecting' | 'partial' | 'demo'
+const MODE_STYLES = {
+  live:       { cls: 'mode-live',       label: 'LIVE',       meta: '本番データ' },
+  connecting: { cls: 'mode-connecting', label: 'CONNECTING', meta: 'JEPX 接続中…' },
+  partial:    { cls: 'mode-partial',    label: 'PARTIAL',    meta: '一部接続失敗' },
+  demo:       { cls: 'mode-demo',       label: 'DEMO',       meta: 'デモデータ' },
+};
+export function setMode(state, meta) {
+  const badge = document.getElementById('mode-badge');
   if (!badge) return;
-  if (on) {
-    badge.classList.remove('hidden');
-    badge.classList.add('flex');
-    badge.title = `デモデータ表示中: ${marketKeys.join(', ')}`;
-  } else {
-    badge.classList.add('hidden');
-    badge.classList.remove('flex');
-  }
+  const def = MODE_STYLES[state] || MODE_STYLES.connecting;
+  badge.className = 'mode-badge ' + def.cls;
+  badge.innerHTML = `<span class="dot"></span><span class="label">${def.label}</span><span class="meta">${meta || def.meta}</span>`;
 }
 
 // ───── KANSAI HERO ───────────────────────────────────────────

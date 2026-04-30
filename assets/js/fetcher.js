@@ -1,7 +1,7 @@
 // CORS プロキシを順番に試しながら、Shift-JIS / UTF-8 を自動判定して
 // テキストとして返す fetcher。
 
-import { CORS_PROXIES } from './config.js?v=2026.04.30.2';
+import { CORS_PROXIES } from './config.js?v=2026.04.30.3';
 
 async function tryFetch(url, signal) {
   const res = await fetch(url, {
