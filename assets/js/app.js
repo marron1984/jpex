@@ -1,17 +1,17 @@
 // JEPX Live — エントリーポイント
 
-import { REFRESH_MS, SOURCES, AREAS, fiscalYear } from './config.js';
-import { fetchCsv } from './fetcher.js';
-import { parseCsvWithHeader } from './csv.js';
-import { parseSpot, parseIntraday, parseForward, parseBaseload, parseFip } from './markets.js';
-import { demoSpot, demoIntraday, demoForward, demoBaseload, demoFip } from './demo.js';
+import { REFRESH_MS, SOURCES, AREAS, fiscalYear } from './config.js?v=2026.04.30.2';
+import { fetchCsv } from './fetcher.js?v=2026.04.30.2';
+import { parseCsvWithHeader } from './csv.js?v=2026.04.30.2';
+import { parseSpot, parseIntraday, parseForward, parseBaseload, parseFip } from './markets.js?v=2026.04.30.2';
+import { demoSpot, demoIntraday, demoForward, demoBaseload, demoFip } from './demo.js?v=2026.04.30.2';
 import {
   renderKpis, renderSpotChart, renderAreaToggles, renderAreaMini,
   renderProfile, renderIntradayChart, renderForward, renderBaseload,
   renderFip, renderTicker, renderHero, startHeroAnimations,
   setStatus, setRefreshing, setDemoMode,
   startCountdown, resetCountdown, toggleFullscreen,
-} from './ui.js';
+} from './ui.js?v=2026.04.30.2';
 
 // ───── 状態 ─────────────────────────────────────────────────────
 const state = {
