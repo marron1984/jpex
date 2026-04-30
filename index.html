@@ -31,7 +31,7 @@
       },
     };
   </script>
-  <link rel="stylesheet" href="assets/css/styles.css?v=2026.04.30.4" />
+  <link rel="stylesheet" href="assets/css/styles.css?v=2026.04.30.5" />
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
 </head>
 <body class="bg-ink-950 text-slate-100 min-h-screen antialiased">
@@ -84,7 +84,6 @@
 
       <!-- KANSAI HERO (day-trading focus card) -->
       <section id="hero" class="hero card">
-        <div class="hero-scan"></div>
         <div class="hero-grid">
           <div class="hero-left">
             <div class="hero-tag">
@@ -156,6 +155,80 @@
       <!-- KPI ROW -->
       <section id="kpi-row" class="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-3">
         <!-- KPI cards injected by JS -->
+      </section>
+
+      <!-- PLANT (DEMO): 奈良吉野発電所 -->
+      <section id="plant" class="card plant-card">
+        <div class="plant-head">
+          <div class="plant-title">
+            <span class="plant-icon">💧</span>
+            <div>
+              <h2 class="card-title">
+                奈良吉野発電所
+                <span class="plant-tag">DEMO</span>
+              </h2>
+              <p class="card-meta">
+                <span id="plant-type">小水力 / Run-of-river</span> ·
+                容量 <span id="plant-capacity" class="num">— MW</span> ·
+                運転開始 <span id="plant-op-start">—</span>
+              </p>
+            </div>
+          </div>
+          <div class="plant-status">
+            <span class="dot"></span> RUNNING
+          </div>
+        </div>
+
+        <div class="plant-grid">
+          <div class="plant-stats">
+            <div class="plant-stat plant-stat-primary">
+              <span class="label">現在出力</span>
+              <span class="value num" id="plant-current">— MW</span>
+              <span class="sub">CAPACITY FACTOR <b id="plant-cf">—</b></span>
+            </div>
+            <div class="plant-stat">
+              <span class="label">本日 発電量</span>
+              <span class="value num" id="plant-today-kwh">— MWh</span>
+              <span class="sub">PEAK <b id="plant-today-peak">—</b></span>
+            </div>
+            <div class="plant-stat">
+              <span class="label">前日比</span>
+              <span class="value num" id="plant-dod">—%</span>
+              <span class="sub">DAY-OVER-DAY</span>
+            </div>
+            <div class="plant-stat">
+              <span class="label">過去30日</span>
+              <span class="value num" id="plant-30-kwh">— MWh</span>
+              <span class="sub">CF AVG <b id="plant-30-cf">—</b></span>
+            </div>
+            <div class="plant-stat">
+              <span class="label">累計</span>
+              <span class="value num" id="plant-cumulative">— MWh</span>
+              <span class="sub">SINCE <b id="plant-since">—</b></span>
+            </div>
+          </div>
+
+          <div class="plant-charts">
+            <div class="plant-chart-block">
+              <div class="plant-chart-head">
+                <span class="t">本日 24h 出力プロファイル</span>
+                <span class="u">MW</span>
+              </div>
+              <div class="plant-chart-canvas-wrap">
+                <canvas id="plant-hourly-chart"></canvas>
+              </div>
+            </div>
+            <div class="plant-chart-block">
+              <div class="plant-chart-head">
+                <span class="t">過去 7 日 発電量</span>
+                <span class="u">MWh / 日</span>
+              </div>
+              <div class="plant-chart-canvas-wrap">
+                <canvas id="plant-daily-chart"></canvas>
+              </div>
+            </div>
+          </div>
+        </div>
       </section>
 
       <!-- SPOT MAIN CHART -->
@@ -289,6 +362,6 @@
     </div>
   </div>
 
-  <script type="module" src="assets/js/app.js?v=2026.04.30.4"></script>
+  <script type="module" src="assets/js/app.js?v=2026.04.30.5"></script>
 </body>
 </html>

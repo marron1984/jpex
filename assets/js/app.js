@@ -1,17 +1,18 @@
 // JEPX Live — エントリーポイント
 
-import { REFRESH_MS, SOURCES, AREAS, fiscalYear } from './config.js?v=2026.04.30.4';
-import { fetchCsv, fetchMarketCsv } from './fetcher.js?v=2026.04.30.4';
-import { parseCsvWithHeader } from './csv.js?v=2026.04.30.4';
-import { parseSpot, parseIntraday, parseForward, parseBaseload, parseFip } from './markets.js?v=2026.04.30.4';
-import { demoSpot, demoIntraday, demoForward, demoBaseload, demoFip } from './demo.js?v=2026.04.30.4';
+import { REFRESH_MS, SOURCES, AREAS, fiscalYear } from './config.js?v=2026.04.30.5';
+import { fetchCsv, fetchMarketCsv } from './fetcher.js?v=2026.04.30.5';
+import { parseCsvWithHeader } from './csv.js?v=2026.04.30.5';
+import { parseSpot, parseIntraday, parseForward, parseBaseload, parseFip } from './markets.js?v=2026.04.30.5';
+import { demoSpot, demoIntraday, demoForward, demoBaseload, demoFip } from './demo.js?v=2026.04.30.5';
+import { demoPlant } from './plant.js?v=2026.04.30.5';
 import {
   renderKpis, renderSpotChart, renderAreaToggles, renderAreaMini,
   renderProfile, renderIntradayChart, renderForward, renderBaseload,
-  renderFip, renderTicker, renderHero, startHeroAnimations,
+  renderFip, renderTicker, renderHero, renderPlant, startHeroAnimations,
   setStatus, setRefreshing, setMode,
   startCountdown, resetCountdown, toggleFullscreen,
-} from './ui.js?v=2026.04.30.4';
+} from './ui.js?v=2026.04.30.5';
 
 // ───── 状態 ─────────────────────────────────────────────────────
 const state = {
@@ -100,6 +101,7 @@ function sum(arr) { return arr.reduce((s, v) => s + v, 0); }
 function render() {
   renderHero(state.spot, state.intraday);
   renderKpis(deriveMetrics());
+  renderPlant(demoPlant());
   renderSpotChart(state.spot, { range: state.spotRange, activeAreas: [...state.spotAreas] });
   renderAreaToggles(state.spotAreas, () => render());
   renderAreaMini(state.spot);
@@ -265,6 +267,9 @@ startHeroAnimations(() => {
 // 3) 実データ取得を開始
 loadAll();
 setInterval(loadAll, REFRESH_MS);
+
+// 4) 奈良吉野発電所 (DEMO) は 5 秒ごとに再生成して常に値が動くように
+setInterval(() => { try { renderPlant(demoPlant()); } catch {} }, 5000);
 
 // タブが復帰した時にも更新
 document.addEventListener('visibilitychange', () => {

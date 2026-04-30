@@ -15,6 +15,20 @@ const ALLOWED = /^https?:\/\/(www\.)?jepx\.(jp|org)\//i;
 
 // 候補 URL 雛形。{YEAR} は西暦4桁、{FY} は会計年度 (4-3月)。
 // 上から順に試行するので、最も最新で確実なパターンを上に置く。
+// JEPX 公式の市場データページ。固定 URL 候補で取れなかった時に、
+// このページの HTML から CSV リンクを抽出して再試行する。
+const MARKET_PAGES = {
+  spot:     'https://www.jepx.jp/electricpower/market-data/spot/',
+  intraday: 'https://www.jepx.jp/electricpower/market-data/intraday/',
+  forward:  'https://www.jepx.jp/electricpower/market-data/forward/',
+  baseload: 'https://www.jepx.jp/electricpower/market-data/baseload/',
+  fip:      'https://www.jepx.jp/electricpower/market-data/fit_fip/',
+};
+
+// HTML 中の CSV リンクを引っ張り出す正規表現
+const CSV_HREF_RE = /(?:href|src|data-href|data-url|url)\s*=\s*["']([^"']+\.csv[^"']*)["']/gi;
+const CSV_BARE_RE = /https?:\/\/(?:www\.)?jepx\.(?:jp|org)\/[^\s"'<>]+\.csv/gi;
+
 const URL_PATTERNS = {
   spot: [
     'https://www.jepx.jp/market/excel/spot_{YEAR}.csv',
@@ -97,27 +111,58 @@ export default async function handler(req) {
   const market = reqUrl.searchParams.get('market');
   const explicitUrl = reqUrl.searchParams.get('url');
 
-  // ─── ?market=… モード: 候補 URL を順次試行 ──────────────────
+  // ─── ?market=… モード: 候補 URL → ページスクレイプの順で探索 ───
   if (market && URL_PATTERNS[market]) {
     const tried = [];
+
+    // (a) 固定パターン
     for (const pat of URL_PATTERNS[market]) {
       const u = expand(pat);
       const res = await tryUrl(u);
-      tried.push(`${u} → ${res.ok ? 'OK' : (res.status + (res.reason ? ` ${res.reason}` : ''))}`);
-      if (res.ok) {
-        return new Response(res.buf, {
-          status: 200,
-          headers: {
-            'Content-Type': res.contentType,
-            'Cache-Control': 'public, s-maxage=300, stale-while-revalidate=60',
-            'Access-Control-Allow-Origin': '*',
-            'Access-Control-Expose-Headers': 'X-Source-Url, X-Tried',
-            'X-Source-Url': u,
-            'X-Tried': String(tried.length),
-          },
+      tried.push(`pattern ${u} → ${res.ok ? 'OK' : (res.status + (res.reason ? ` ${res.reason}` : ''))}`);
+      if (res.ok) return csvResponse(res, u, tried.length, 'pattern');
+    }
+
+    // (b) JEPX のページ HTML から CSV リンクを抽出して試行
+    const pageUrl = MARKET_PAGES[market];
+    if (pageUrl) {
+      try {
+        const pageRes = await fetch(pageUrl, {
+          headers: FETCH_HEADERS, redirect: 'follow',
+          signal: AbortSignal.timeout(10000),
         });
+        if (pageRes.ok) {
+          const html = await pageRes.text();
+          const hrefs = new Set();
+          let m;
+          CSV_HREF_RE.lastIndex = 0;
+          while ((m = CSV_HREF_RE.exec(html))) hrefs.add(absoluteUrl(m[1], pageUrl));
+          CSV_BARE_RE.lastIndex = 0;
+          while ((m = CSV_BARE_RE.exec(html))) hrefs.add(m[0]);
+
+          // 同年のものを優先するように並べ替え
+          const yr = new Date().getFullYear();
+          const sorted = [...hrefs].sort((a, b) => {
+            const ay = (a.match(/(\d{4})/) || [, 0])[1] | 0;
+            const by = (b.match(/(\d{4})/) || [, 0])[1] | 0;
+            return Math.abs(yr - ay) - Math.abs(yr - by);
+          });
+
+          for (const u of sorted.slice(0, 8)) {
+            if (!ALLOWED.test(u)) continue;
+            const res = await tryUrl(u);
+            tried.push(`scrape  ${u} → ${res.ok ? 'OK' : (res.status + (res.reason ? ` ${res.reason}` : ''))}`);
+            if (res.ok) return csvResponse(res, u, tried.length, 'scrape');
+          }
+          if (sorted.length === 0) tried.push(`scrape  ${pageUrl} → no .csv links found`);
+        } else {
+          tried.push(`scrape  ${pageUrl} → page status ${pageRes.status}`);
+        }
+      } catch (e) {
+        tried.push(`scrape  ${pageUrl} → ${e.message || e}`);
       }
     }
+
     return text(`No working URL for market=${market}\n\nTried:\n${tried.join('\n')}`, 502);
   }
 
@@ -150,6 +195,29 @@ Usage:
   /api/jepx?market=spot       (also: intraday, forward, baseload, fip)
   /api/jepx?url=https://www.jepx.jp/market/excel/spot_2026.csv
 `, 200);
+}
+
+function csvResponse(res, url, triedCount, via) {
+  return new Response(res.buf, {
+    status: 200,
+    headers: {
+      'Content-Type': res.contentType,
+      'Cache-Control': 'public, s-maxage=300, stale-while-revalidate=60',
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Expose-Headers': 'X-Source-Url, X-Tried, X-Via',
+      'X-Source-Url': url,
+      'X-Tried': String(triedCount),
+      'X-Via': via,
+    },
+  });
+}
+
+function absoluteUrl(href, base) {
+  try {
+    return new URL(href, base).href;
+  } catch {
+    return href;
+  }
 }
 
 function text(s, status = 200) {

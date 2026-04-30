@@ -367,20 +367,8 @@ body { padding-bottom: 48px; }
   opacity: 0.5;
 }
 
-/* スキャンライン (常時走るホログラム風効果) */
-.hero-scan {
-  position: absolute; left: -10%; right: -10%; height: 2px;
-  background: linear-gradient(90deg, transparent, rgba(250,204,21,0.55), transparent);
-  filter: blur(1px);
-  animation: scan-vertical 4.5s linear infinite;
-  pointer-events: none;
-}
-@keyframes scan-vertical {
-  0%   { top: -2%;  opacity: 0; }
-  10%  { opacity: 1; }
-  90%  { opacity: 1; }
-  100% { top: 102%; opacity: 0; }
-}
+/* スキャンラインは削除済 (ユーザ要望) */
+.hero-scan { display: none !important; }
 
 .hero-grid {
   display: grid; grid-template-columns: 1.1fr 1fr; gap: 1.25rem;
@@ -561,6 +549,139 @@ body { padding-bottom: 48px; }
   pointer-events: none;
 }
 .hero-spark-stat { color: #facc15; font-family: 'JetBrains Mono', ui-monospace, monospace; }
+
+/* ───── PLANT CARD (奈良吉野発電所 DEMO) ────────────────────── */
+.plant-card {
+  position: relative;
+  border-color: rgba(34, 211, 238, 0.20);
+  background:
+    radial-gradient(900px 200px at 0% -10%, rgba(34, 211, 238, 0.14), transparent 70%),
+    radial-gradient(700px 180px at 100% 110%, rgba(96, 165, 250, 0.10), transparent 70%),
+    linear-gradient(180deg, rgba(8, 18, 28, 0.85), rgba(10, 14, 26, 0.95));
+  overflow: hidden;
+}
+/* 水流っぽいゆっくり横移動するシマー */
+.plant-card::after {
+  content: ""; position: absolute; inset: 0;
+  background:
+    repeating-linear-gradient(135deg,
+      transparent 0 60px,
+      rgba(34, 211, 238, 0.04) 60px 62px);
+  animation: plant-flow 14s linear infinite;
+  pointer-events: none;
+  opacity: 0.6;
+}
+@keyframes plant-flow {
+  from { transform: translate(0, 0); }
+  to   { transform: translate(124px, 0); }
+}
+
+.plant-head {
+  display: flex; align-items: flex-start; justify-content: space-between;
+  padding: 1rem 1.25rem 0.6rem;
+  position: relative; z-index: 1;
+  flex-wrap: wrap; gap: 0.5rem;
+}
+.plant-title { display: flex; align-items: flex-start; gap: 0.7rem; }
+.plant-icon {
+  font-size: 1.6rem;
+  filter: drop-shadow(0 0 14px rgba(34, 211, 238, 0.55));
+  animation: plant-bob 3.5s ease-in-out infinite;
+}
+@keyframes plant-bob {
+  0%, 100% { transform: translateY(0) rotate(-2deg); }
+  50%      { transform: translateY(-2px) rotate(2deg); }
+}
+.plant-tag {
+  display: inline-block;
+  padding: 0.12rem 0.45rem;
+  margin-left: 0.4rem;
+  border-radius: 0.35rem;
+  background: rgba(250, 204, 21, 0.18);
+  color: #facc15;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 0.6rem; letter-spacing: 0.18em; font-weight: 800;
+  box-shadow: inset 0 0 0 1px rgba(250,204,21,0.40);
+  vertical-align: middle;
+}
+.plant-status {
+  display: inline-flex; align-items: center; gap: 0.4rem;
+  padding: 0.3rem 0.65rem;
+  border-radius: 9999px;
+  background: rgba(74, 222, 128, 0.12);
+  color: #4ade80;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 0.66rem; letter-spacing: 0.18em; font-weight: 800;
+  box-shadow: inset 0 0 0 1px rgba(74,222,128,0.40);
+}
+.plant-status .dot { width: 7px; height: 7px; border-radius: 50%; background: #4ade80; box-shadow: 0 0 10px #4ade80; animation: live-blink 1.4s ease-in-out infinite; }
+
+.plant-grid {
+  display: grid; grid-template-columns: minmax(280px, 0.9fr) 1.6fr; gap: 1rem;
+  padding: 0.4rem 1.25rem 1.1rem;
+  position: relative; z-index: 1;
+}
+@media (max-width: 1000px) { .plant-grid { grid-template-columns: 1fr; } }
+
+.plant-stats {
+  display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.5rem;
+  align-content: start;
+}
+.plant-stat {
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 0.55rem;
+  padding: 0.6rem 0.75rem;
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,0.05);
+  display: flex; flex-direction: column; gap: 0.1rem;
+}
+.plant-stat .label {
+  font-size: 0.62rem; color: #94a3b8;
+  letter-spacing: 0.12em; text-transform: uppercase; font-weight: 700;
+}
+.plant-stat .value {
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 1.1rem; font-weight: 800; color: #e2e8f0; letter-spacing: -0.01em;
+  margin-top: 0.05rem;
+}
+.plant-stat .sub {
+  font-size: 0.6rem; color: #64748b; margin-top: 0.05rem;
+  letter-spacing: 0.06em;
+}
+.plant-stat .sub b { color: #94a3b8; font-family: 'JetBrains Mono', ui-monospace, monospace; }
+
+.plant-stat-primary {
+  grid-column: span 2;
+  background: linear-gradient(135deg, rgba(34, 211, 238, 0.16), rgba(34, 211, 238, 0.04));
+  box-shadow: inset 0 0 0 1px rgba(34, 211, 238, 0.30), 0 0 28px -10px rgba(34, 211, 238, 0.40);
+}
+.plant-stat-primary .value {
+  font-size: 1.9rem;
+  background: linear-gradient(180deg, #e0f7ff 0%, #7df9ff 60%, #22d3ee 100%);
+  -webkit-background-clip: text; background-clip: text;
+  -webkit-text-fill-color: transparent;
+  filter: drop-shadow(0 0 14px rgba(34, 211, 238, 0.40));
+}
+
+.plant-charts {
+  display: grid; grid-template-rows: 1fr 1fr; gap: 0.75rem;
+}
+.plant-chart-block {
+  background: rgba(255, 255, 255, 0.02);
+  border-radius: 0.55rem;
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,0.05);
+  padding: 0.6rem 0.7rem 0.4rem;
+  display: flex; flex-direction: column;
+}
+.plant-chart-head {
+  display: flex; justify-content: space-between; align-items: baseline;
+  font-size: 0.7rem; font-weight: 700; color: #cbd5e1;
+}
+.plant-chart-head .u { color: #64748b; font-size: 0.62rem; letter-spacing: 0.12em; font-family: 'JetBrains Mono', ui-monospace, monospace; }
+.plant-chart-canvas-wrap { position: relative; flex: 1 1 0; min-height: 110px; height: 130px; margin-top: 0.3rem; }
+
+/* 前日比カラー */
+#plant-dod.up   { color: #4ade80; }
+#plant-dod.down { color: #fb7185; }
 
 /* ───── Reduce motion accessibility ────────────────────────── */
 @media (prefers-reduced-motion: reduce) {

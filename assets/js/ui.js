@@ -1,6 +1,6 @@
 // 描画レイヤ。Chart.js + DOM 操作。
 
-import { AREAS, SLOT_LABELS } from './config.js?v=2026.04.30.4';
+import { AREAS, SLOT_LABELS } from './config.js?v=2026.04.30.5';
 
 // ───── ユーティリティ ──────────────────────────────────────────────
 
@@ -490,6 +490,149 @@ export function setMode(state, meta) {
   const def = MODE_STYLES[state] || MODE_STYLES.connecting;
   badge.className = 'mode-badge ' + def.cls;
   badge.innerHTML = `<span class="dot"></span><span class="label">${def.label}</span><span class="meta">${meta || def.meta}</span>`;
+}
+
+// ───── PLANT (奈良吉野発電所) ────────────────────────────────
+
+let plantCharts = { hourly: null, daily: null };
+const plantPrev = {};   // 値変化アニメ用
+
+function setPlantText(id, text) {
+  const e = document.getElementById(id);
+  if (e) e.textContent = text;
+}
+
+function animatePlantValue(id, next, formatter, key) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  const prev = plantPrev[key ?? id];
+  if (prev != null && next != null && Math.abs(prev - next) > 1e-6) {
+    animateValue(el, prev, next, formatter, 700);
+  } else {
+    el.textContent = formatter(next);
+  }
+  plantPrev[key ?? id] = next;
+}
+
+export function renderPlant(p) {
+  if (!p) return;
+
+  // メタ
+  setPlantText('plant-type', p.type);
+  setPlantText('plant-capacity', `${(p.capacityKw / 1000).toFixed(1)} MW`);
+  setPlantText('plant-op-start', p.operationStart);
+  setPlantText('plant-since', p.operationStart);
+
+  // 値 (アニメ更新)
+  animatePlantValue('plant-current',     p.currentKw,                    v => `${(v / 1000).toFixed(2)} MW`);
+  animatePlantValue('plant-cf',          p.capacityFactor,               v => `${v.toFixed(1)}%`);
+  animatePlantValue('plant-today-kwh',   p.todayKwh,                     v => `${(v / 1000).toFixed(1)} MWh`);
+  animatePlantValue('plant-today-peak',  p.todayPeakKw,                  v => `${(v / 1000).toFixed(2)} MW`);
+  animatePlantValue('plant-30-kwh',      p.last30Kwh,                    v => `${(v / 1000).toFixed(0)} MWh`);
+  animatePlantValue('plant-30-cf',       p.last30CapacityFactor,         v => `${v.toFixed(1)}%`);
+  animatePlantValue('plant-cumulative',  p.cumulativeMWh,                v => `${Math.round(v).toLocaleString('ja-JP')} MWh`);
+
+  // 前日比
+  const dod = document.getElementById('plant-dod');
+  if (dod) {
+    if (p.dayOnDayPct == null) {
+      dod.textContent = '—';
+      dod.classList.remove('up', 'down');
+    } else {
+      dod.textContent = `${p.dayOnDayPct > 0 ? '+' : ''}${p.dayOnDayPct.toFixed(1)}%`;
+      dod.classList.toggle('up',   p.dayOnDayPct > 0);
+      dod.classList.toggle('down', p.dayOnDayPct < 0);
+    }
+  }
+
+  // 24h チャート
+  const c1 = document.getElementById('plant-hourly-chart');
+  if (c1 && typeof Chart !== 'undefined') {
+    const labels = p.todayHourly.map(h => `${String(h.hour).padStart(2, '0')}:00`);
+    const data = p.todayHourly.map(h => h.kw / 1000);
+    if (plantCharts.hourly) plantCharts.hourly.destroy();
+    plantCharts.hourly = new Chart(c1, {
+      type: 'line',
+      data: { labels, datasets: [{
+        label: '出力',
+        data,
+        borderColor: '#22d3ee',
+        backgroundColor: (ctx) => {
+          const { ctx: c, chartArea } = ctx.chart;
+          if (!chartArea) return 'rgba(34,211,238,0.12)';
+          const g = c.createLinearGradient(0, chartArea.top, 0, chartArea.bottom);
+          g.addColorStop(0, 'rgba(34,211,238,0.45)');
+          g.addColorStop(1, 'rgba(34,211,238,0.00)');
+          return g;
+        },
+        fill: true, tension: 0.35, borderWidth: 2,
+        pointRadius: 0, pointHoverRadius: 4,
+      }]},
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            backgroundColor: 'rgba(10,14,26,0.95)',
+            borderColor: 'rgba(34,211,238,0.40)',
+            borderWidth: 1, cornerRadius: 8,
+            titleColor: '#7df9ff', bodyColor: '#e2e8f0',
+            callbacks: { label: c => `${c.parsed.y.toFixed(2)} MW` },
+          },
+        },
+        scales: {
+          x: { ticks: { color: '#64748b', font: { size: 9 }, autoSkip: true, maxTicksLimit: 8 }, grid: { color: 'rgba(255,255,255,0.04)' } },
+          y: { ticks: { color: '#64748b', font: { size: 9 }, callback: v => `${v}MW` }, grid: { color: 'rgba(255,255,255,0.04)' }, beginAtZero: true, suggestedMax: p.capacityKw / 1000 },
+        },
+      },
+    });
+  }
+
+  // 7日 棒チャート
+  const c2 = document.getElementById('plant-daily-chart');
+  if (c2 && typeof Chart !== 'undefined') {
+    const labels = p.last7.map(d => d.date.slice(5));
+    const data   = p.last7.map(d => d.kwh / 1000);
+    if (plantCharts.daily) plantCharts.daily.destroy();
+    plantCharts.daily = new Chart(c2, {
+      type: 'bar',
+      data: { labels, datasets: [{
+        label: '日次発電量',
+        data,
+        backgroundColor: (ctx) => {
+          const idx = ctx.dataIndex;
+          const isToday = idx === data.length - 1;
+          const { ctx: c, chartArea } = ctx.chart;
+          if (!chartArea) return isToday ? '#facc15' : '#22d3ee';
+          const g = c.createLinearGradient(0, chartArea.top, 0, chartArea.bottom);
+          if (isToday) {
+            g.addColorStop(0, '#fde68a'); g.addColorStop(1, '#f59e0b');
+          } else {
+            g.addColorStop(0, '#7df9ff'); g.addColorStop(1, '#0ea5b7');
+          }
+          return g;
+        },
+        borderRadius: 4, borderSkipped: false,
+      }]},
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            backgroundColor: 'rgba(10,14,26,0.95)',
+            borderColor: 'rgba(34,211,238,0.40)',
+            borderWidth: 1, cornerRadius: 8,
+            titleColor: '#7df9ff', bodyColor: '#e2e8f0',
+            callbacks: { label: c => `${c.parsed.y.toFixed(1)} MWh` },
+          },
+        },
+        scales: {
+          x: { ticks: { color: '#64748b', font: { size: 9 } }, grid: { display: false } },
+          y: { ticks: { color: '#64748b', font: { size: 9 }, callback: v => `${v}` }, grid: { color: 'rgba(255,255,255,0.04)' }, beginAtZero: true },
+        },
+      },
+    });
+  }
 }
 
 // ───── KANSAI HERO ───────────────────────────────────────────
