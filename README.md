@@ -3,7 +3,23 @@
 日本卸電力取引所 (JEPX) の **5市場** をリアルタイム表示するダッシュボード。
 スポット・時間前・先渡・ベースロード・FIP の主要指標をひと目で。
 
-![10分自動更新](https://img.shields.io/badge/refresh-10min-22d3ee) ![static](https://img.shields.io/badge/build-static-0ea5b7) ![license](https://img.shields.io/badge/license-MIT-94a3b8)
+![10分自動更新](https://img.shields.io/badge/refresh-10min-22d3ee) ![static](https://img.shields.io/badge/build-static-0ea5b7) ![pages](https://img.shields.io/badge/deploy-GitHub_Pages-7df9ff) ![license](https://img.shields.io/badge/license-MIT-94a3b8)
+
+> **🌐 公開 URL** : https://marron1984.github.io/jpex/  *(GitHub Pages, 自動デプロイ)*
+
+## ウェブで起動 (1度だけ設定)
+
+このリポジトリには **GitHub Pages 自動デプロイ** が含まれています。
+ブランチに push される度に `.github/workflows/pages.yml` が走り、`https://<owner>.github.io/<repo>/` に公開されます。
+
+初回のみ以下の設定が必要です:
+
+1. リポジトリの **Settings → Pages** を開く
+2. **Source** に **「GitHub Actions」** を選択
+3. このブランチに何か push する (もしくは Actions タブから手動実行)
+
+数十秒後に上記 URL が稼働します。
+以降は **`git push` のたびに自動再デプロイ**。サーバ運用は一切不要です。
 
 ## 表示内容
 
@@ -25,19 +41,22 @@
 - **10 分間隔** で自動再取得。タブ復帰時にも即時再取得。
 - すべての URL は `assets/js/config.js` の `SOURCES` で書き換え可能 (年度・命名規則の揺れに備えて 2-3 候補を試行する設計)。
 
-## 使い方
+## ローカルで動かす場合
 
 ```bash
-# 1. ローカルプレビュー (任意の静的サーバ)
 python3 -m http.server 8080
-# → http://localhost:8080 を開く
-
-# 2. ホスティング
-#    そのまま GitHub Pages / Vercel / Netlify などにデプロイ
+# → http://localhost:8080
 ```
+
+> `file://` で直接開くと ESM モジュールがブロックされます。必ず HTTP(S) 経由で。
 
 CORS プロキシを経由するため初回ロードに数秒かかる場合があります。
 取得失敗が続く場合は `assets/js/config.js` の `SOURCES.<market>.urls` を実際の最新 URL に更新してください。
+
+## 他のホスティングへ
+
+すべて **静的ファイルのみ** なので、リポジトリ全体を `vercel deploy` / `netlify deploy --prod --dir=.` / S3 同期、いずれでもそのまま動きます。
+ビルドステップ・サーバランタイム・環境変数は一切不要です。
 
 ## カスタマイズ
 
