@@ -31,7 +31,7 @@
       },
     };
   </script>
-  <link rel="stylesheet" href="assets/css/styles.css?v=2026.04.30.7" />
+  <link rel="stylesheet" href="assets/css/styles.css?v=2026.04.30.8" />
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
 </head>
 <body class="bg-ink-950 text-slate-100 min-h-screen antialiased">
@@ -162,18 +162,18 @@
         <!-- KPI cards injected by JS -->
       </section>
 
-      <!-- PLANT (DEMO): 奈良吉野発電所 -->
+      <!-- PLANT (DEMO): 奈良吉野太陽光発電所 -->
       <section id="plant" class="card plant-card">
         <div class="plant-head">
           <div class="plant-title">
-            <span class="plant-icon">💧</span>
+            <span class="plant-icon">☀️</span>
             <div>
               <h2 class="card-title">
-                奈良吉野発電所
+                奈良吉野太陽光発電所
                 <span class="plant-tag">DEMO</span>
               </h2>
               <p class="card-meta">
-                <span id="plant-type">小水力 / Run-of-river</span> ·
+                <span id="plant-type">太陽光 / Solar PV</span> ·
                 容量 <span id="plant-capacity" class="num">— MW</span> ·
                 運転開始 <span id="plant-op-start">—</span>
               </p>
@@ -232,6 +232,26 @@
                 <canvas id="plant-daily-chart"></canvas>
               </div>
             </div>
+          </div>
+        </div>
+
+        <!-- 30 分天気予報 (24時間) -->
+        <div class="plant-weather">
+          <div class="weather-head">
+            <div>
+              <h3 class="weather-title">天気予報 <span class="weather-sub">30 分予報 · 24 時間 · 奈良県吉野郡</span></h3>
+              <p class="card-meta">太陽光出力予測連動</p>
+            </div>
+            <div class="weather-now" id="weather-now">
+              <span class="icon" id="weather-now-icon">—</span>
+              <div class="now-meta">
+                <span class="cond" id="weather-now-cond">—</span>
+                <span class="temp" id="weather-now-temp">—°C</span>
+              </div>
+            </div>
+          </div>
+          <div class="weather-strip" id="weather-strip">
+            <span class="weather-loading">forecast loading…</span>
           </div>
         </div>
       </section>
@@ -360,6 +380,6 @@
     </div>
   </main>
 
-  <script type="module" src="assets/js/app.js?v=2026.04.30.7"></script>
+  <script type="module" src="assets/js/app.js?v=2026.04.30.8"></script>
 </body>
 </html>

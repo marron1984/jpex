@@ -568,27 +568,27 @@ body { padding-top: 36px; padding-bottom: 0; }
 /* ───── PLANT CARD (奈良吉野発電所 DEMO) ────────────────────── */
 .plant-card {
   position: relative;
-  border-color: rgba(34, 211, 238, 0.20);
+  border-color: rgba(250, 204, 21, 0.22);
   background:
-    radial-gradient(900px 200px at 0% -10%, rgba(34, 211, 238, 0.14), transparent 70%),
-    radial-gradient(700px 180px at 100% 110%, rgba(96, 165, 250, 0.10), transparent 70%),
-    linear-gradient(180deg, rgba(8, 18, 28, 0.85), rgba(10, 14, 26, 0.95));
+    radial-gradient(900px 220px at 0% -10%, rgba(250, 204, 21, 0.14), transparent 70%),
+    radial-gradient(700px 180px at 100% 110%, rgba(245, 158, 11, 0.10), transparent 70%),
+    linear-gradient(180deg, rgba(28, 22, 8, 0.85), rgba(10, 14, 26, 0.95));
   overflow: hidden;
 }
-/* 水流っぽいゆっくり横移動するシマー */
+/* 太陽光線がゆっくり差し込むシマー */
 .plant-card::after {
   content: ""; position: absolute; inset: 0;
   background:
-    repeating-linear-gradient(135deg,
-      transparent 0 60px,
-      rgba(34, 211, 238, 0.04) 60px 62px);
-  animation: plant-flow 14s linear infinite;
+    repeating-linear-gradient(115deg,
+      transparent 0 80px,
+      rgba(250, 204, 21, 0.05) 80px 82px);
+  animation: plant-flow 22s linear infinite;
   pointer-events: none;
-  opacity: 0.6;
+  opacity: 0.55;
 }
 @keyframes plant-flow {
   from { transform: translate(0, 0); }
-  to   { transform: translate(124px, 0); }
+  to   { transform: translate(160px, 0); }
 }
 
 .plant-head {
@@ -599,13 +599,13 @@ body { padding-top: 36px; padding-bottom: 0; }
 }
 .plant-title { display: flex; align-items: flex-start; gap: 0.7rem; }
 .plant-icon {
-  font-size: 1.6rem;
-  filter: drop-shadow(0 0 14px rgba(34, 211, 238, 0.55));
-  animation: plant-bob 3.5s ease-in-out infinite;
+  font-size: 1.7rem;
+  filter: drop-shadow(0 0 16px rgba(250, 204, 21, 0.65));
+  animation: plant-bob 4.5s ease-in-out infinite;
 }
 @keyframes plant-bob {
-  0%, 100% { transform: translateY(0) rotate(-2deg); }
-  50%      { transform: translateY(-2px) rotate(2deg); }
+  0%, 100% { transform: translateY(0) rotate(0deg)   scale(1.00); }
+  50%      { transform: translateY(-2px) rotate(8deg) scale(1.05); }
 }
 .plant-tag {
   display: inline-block;
@@ -666,15 +666,15 @@ body { padding-top: 36px; padding-bottom: 0; }
 
 .plant-stat-primary {
   grid-column: span 2;
-  background: linear-gradient(135deg, rgba(34, 211, 238, 0.16), rgba(34, 211, 238, 0.04));
-  box-shadow: inset 0 0 0 1px rgba(34, 211, 238, 0.30), 0 0 28px -10px rgba(34, 211, 238, 0.40);
+  background: linear-gradient(135deg, rgba(250, 204, 21, 0.18), rgba(245, 158, 11, 0.04));
+  box-shadow: inset 0 0 0 1px rgba(250, 204, 21, 0.35), 0 0 32px -10px rgba(250, 204, 21, 0.50);
 }
 .plant-stat-primary .value {
   font-size: 1.9rem;
-  background: linear-gradient(180deg, #e0f7ff 0%, #7df9ff 60%, #22d3ee 100%);
+  background: linear-gradient(180deg, #fef9c3 0%, #facc15 55%, #f59e0b 100%);
   -webkit-background-clip: text; background-clip: text;
   -webkit-text-fill-color: transparent;
-  filter: drop-shadow(0 0 14px rgba(34, 211, 238, 0.40));
+  filter: drop-shadow(0 0 14px rgba(250, 204, 21, 0.50));
 }
 
 .plant-charts {
@@ -693,6 +693,85 @@ body { padding-top: 36px; padding-bottom: 0; }
 }
 .plant-chart-head .u { color: #64748b; font-size: 0.62rem; letter-spacing: 0.12em; font-family: 'JetBrains Mono', ui-monospace, monospace; }
 .plant-chart-canvas-wrap { position: relative; flex: 1 1 0; min-height: 110px; height: 130px; margin-top: 0.3rem; }
+
+/* 30 分天気予報ストリップ */
+.plant-weather {
+  position: relative; z-index: 1;
+  padding: 0.4rem 1.25rem 1.1rem;
+  border-top: 1px solid rgba(255,255,255,0.05);
+  margin-top: 0.2rem;
+}
+.weather-head {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 0.55rem; gap: 0.5rem; flex-wrap: wrap;
+}
+.weather-title { font-size: 0.85rem; font-weight: 800; color: #e2e8f0; }
+.weather-sub { color: #94a3b8; font-weight: 500; font-size: 0.7rem; margin-left: 0.4rem; }
+.weather-now {
+  display: inline-flex; align-items: center; gap: 0.6rem;
+  padding: 0.4rem 0.7rem;
+  background: rgba(250, 204, 21, 0.10);
+  border-radius: 0.5rem;
+  box-shadow: inset 0 0 0 1px rgba(250, 204, 21, 0.30);
+}
+.weather-now .icon { font-size: 1.6rem; line-height: 1; }
+.weather-now .now-meta { display: flex; flex-direction: column; line-height: 1.1; }
+.weather-now .cond { font-size: 0.7rem; color: #facc15; font-weight: 700; }
+.weather-now .temp { font-family: 'JetBrains Mono', ui-monospace, monospace; font-weight: 800; color: #e2e8f0; font-size: 0.95rem; }
+
+.weather-strip {
+  display: flex; gap: 5px;
+  overflow-x: auto;
+  padding: 6px 2px 10px;
+  scroll-snap-type: x mandatory;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(250, 204, 21, 0.30) transparent;
+}
+.weather-strip::-webkit-scrollbar { height: 6px; }
+.weather-strip::-webkit-scrollbar-track { background: transparent; }
+.weather-strip::-webkit-scrollbar-thumb { background: rgba(250, 204, 21, 0.30); border-radius: 999px; }
+
+.weather-cell {
+  flex: 0 0 auto;
+  width: 56px;
+  background: rgba(255,255,255,0.03);
+  border-radius: 0.55rem;
+  padding: 0.45rem 0.3rem 0.4rem;
+  display: flex; flex-direction: column; align-items: center; gap: 0.15rem;
+  scroll-snap-align: start;
+  position: relative;
+  overflow: hidden;
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,0.04);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  animation: cell-in 0.4s ease-out backwards;
+}
+.weather-cell:hover { transform: translateY(-2px); }
+.weather-cell::before {
+  content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px;
+  background: var(--cond-color, #94a3b8);
+}
+.weather-cell .time { font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 0.62rem; color: #94a3b8; font-weight: 700; }
+.weather-cell .icon { font-size: 1.35rem; line-height: 1; margin: 0.1rem 0 0.05rem; }
+.weather-cell .temp { font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 0.78rem; font-weight: 800; color: #e2e8f0; }
+.weather-cell .kw   { font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 0.6rem; color: var(--cond-color, #facc15); font-weight: 700; letter-spacing: 0.02em; }
+.weather-cell.now {
+  background: linear-gradient(180deg, rgba(250, 204, 21, 0.18), rgba(250, 204, 21, 0.04));
+  box-shadow: inset 0 0 0 1px rgba(250, 204, 21, 0.55), 0 0 22px -6px rgba(250, 204, 21, 0.45);
+  animation: cell-in 0.4s ease-out, weather-now-pulse 2.4s ease-in-out infinite 0.5s;
+}
+.weather-cell.now .time { color: #facc15; }
+@keyframes cell-in {
+  from { opacity: 0; transform: translateX(8px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+@keyframes weather-now-pulse {
+  0%, 100% { box-shadow: inset 0 0 0 1px rgba(250, 204, 21, 0.55), 0 0 22px -6px rgba(250, 204, 21, 0.45); }
+  50%      { box-shadow: inset 0 0 0 1px rgba(250, 204, 21, 0.85), 0 0 30px -2px rgba(250, 204, 21, 0.75); }
+}
+.weather-cell.night { background: rgba(15, 23, 42, 0.45); }
+.weather-cell.night .icon { filter: brightness(0.85); }
+.weather-cell.night .kw { color: #475569; }
+.weather-loading { color: #475569; font-size: 0.75rem; padding: 0 1rem; }
 
 /* 前日比カラー */
 #plant-dod.up   { color: #4ade80; }

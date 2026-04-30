@@ -1,6 +1,6 @@
 // 描画レイヤ。Chart.js + DOM 操作。
 
-import { AREAS, SLOT_LABELS } from './config.js?v=2026.04.30.7';
+import { AREAS, SLOT_LABELS } from './config.js?v=2026.04.30.8';
 
 // ───── ユーティリティ ──────────────────────────────────────────────
 
@@ -633,6 +633,47 @@ export function renderPlant(p) {
       },
     });
   }
+}
+
+// ───── 天気予報 (30 分予報 / 24h) ────────────────────────────
+
+let _weatherLastHash = '';
+
+export function renderWeather(slots) {
+  if (!slots || !slots.length) return;
+  const strip = document.getElementById('weather-strip');
+  if (!strip) return;
+
+  // 直近表示の更新
+  const now = slots[0];
+  if (now) {
+    const ic = document.getElementById('weather-now-icon');
+    const co = document.getElementById('weather-now-cond');
+    const tp = document.getElementById('weather-now-temp');
+    if (ic) ic.textContent = now.condition.icon;
+    if (co) co.textContent = now.condition.label;
+    if (tp) tp.textContent = `${now.temp.toFixed(1)}°C`;
+  }
+
+  // セル群: ハッシュで再描画判定 (時刻は分単位で動くので必要分だけ)
+  const hash = slots.map(s => `${s.timeStr}:${s.condition.key}:${s.temp}:${s.expectedKw}`).join('|');
+  if (hash === _weatherLastHash) return;
+  _weatherLastHash = hash;
+
+  strip.innerHTML = '';
+  slots.forEach((s, i) => {
+    const cell = el('div', 'weather-cell' + (s.isNow ? ' now' : '') + (s.expectedKw === 0 ? ' night' : ''));
+    cell.style.setProperty('--cond-color', s.condition.color);
+    cell.style.animationDelay = `${i * 12}ms`;
+    cell.title = `${s.timeStr} · ${s.condition.label} · ${s.temp.toFixed(1)}°C · 雲量 ${s.cloudPct}% · 予測出力 ${(s.expectedKw / 1000).toFixed(2)} MW`;
+    cell.innerHTML = `
+      <div class="time">${s.timeStr}</div>
+      <div class="icon">${s.condition.icon}</div>
+      <div class="temp">${s.temp.toFixed(1)}°</div>
+      <div class="kw">${s.expectedKw === 0 ? '—' : `${(s.expectedKw / 1000).toFixed(2)}MW`}</div>
+    `;
+    strip.appendChild(cell);
+  });
 }
 
 // ───── KANSAI HERO ───────────────────────────────────────────

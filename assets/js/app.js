@@ -1,18 +1,19 @@
 // JEPX Live — エントリーポイント
 
-import { REFRESH_MS, SOURCES, AREAS, fiscalYear } from './config.js?v=2026.04.30.7';
-import { fetchCsv, fetchMarketCsv } from './fetcher.js?v=2026.04.30.7';
-import { parseCsvWithHeader } from './csv.js?v=2026.04.30.7';
-import { parseSpot, parseIntraday, parseForward, parseBaseload, parseFip } from './markets.js?v=2026.04.30.7';
-import { demoSpot, demoIntraday, demoForward, demoBaseload, demoFip } from './demo.js?v=2026.04.30.7';
-import { demoPlant } from './plant.js?v=2026.04.30.7';
+import { REFRESH_MS, SOURCES, AREAS, fiscalYear } from './config.js?v=2026.04.30.8';
+import { fetchCsv, fetchMarketCsv } from './fetcher.js?v=2026.04.30.8';
+import { parseCsvWithHeader } from './csv.js?v=2026.04.30.8';
+import { parseSpot, parseIntraday, parseForward, parseBaseload, parseFip } from './markets.js?v=2026.04.30.8';
+import { demoSpot, demoIntraday, demoForward, demoBaseload, demoFip } from './demo.js?v=2026.04.30.8';
+import { demoPlant, demoWeather } from './plant.js?v=2026.04.30.8';
 import {
   renderKpis, renderSpotChart, renderAreaToggles, renderAreaMini,
   renderProfile, renderIntradayChart, renderForward, renderBaseload,
-  renderFip, renderTicker, renderHero, renderPlant, startHeroAnimations,
+  renderFip, renderTicker, renderHero, renderPlant, renderWeather,
+  startHeroAnimations,
   setStatus, setRefreshing, setMode,
   startCountdown, resetCountdown, toggleFullscreen,
-} from './ui.js?v=2026.04.30.7';
+} from './ui.js?v=2026.04.30.8';
 
 // ───── 状態 ─────────────────────────────────────────────────────
 const state = {
@@ -102,6 +103,7 @@ function render() {
   renderHero(state.spot, state.intraday);
   renderKpis(deriveMetrics());
   renderPlant(demoPlant());
+  renderWeather(demoWeather());
   renderSpotChart(state.spot, { range: state.spotRange, activeAreas: [...state.spotAreas] });
   renderAreaToggles(state.spotAreas, () => render());
   renderAreaMini(state.spot);
@@ -277,8 +279,10 @@ startHeroAnimations(() => {
 loadAll();
 setInterval(loadAll, REFRESH_MS);
 
-// 4) 奈良吉野発電所 (DEMO) は 5 秒ごとに再生成して常に値が動くように
+// 4) 奈良吉野太陽光発電所 (DEMO) は 5 秒ごとに再生成して常に値が動くように
 setInterval(() => { try { renderPlant(demoPlant()); } catch {} }, 5000);
+// 天気予報は 60 秒ごと (30 分コマなのでこの粒度で十分)
+setInterval(() => { try { renderWeather(demoWeather()); } catch {} }, 60_000);
 
 // タブが復帰した時にも更新
 document.addEventListener('visibilitychange', () => {
