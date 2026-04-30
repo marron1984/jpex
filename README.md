@@ -62,6 +62,24 @@ GitHub Pages 用のワークフローも `.github/workflows/pages.yml` に同梱
 - **10 分間隔** で自動再取得。タブ復帰時にも即時再取得。
 - すべての URL は `assets/js/config.js` の `SOURCES` で書き換え可能 (年度・命名規則の揺れに備えて 2-3 候補を試行する設計)。
 
+## データソースのフォールバック構造
+
+JEPX サーバーが Vercel Edge IP からの fetch を 403 で弾くケースに対応するため、二段構えの実装を持つ:
+
+1. **LIVE** — `/api/jepx?market=<key>` が JEPX を直 fetch。成功すれば即時。
+2. **GitHub snapshot** — LIVE 失敗時、Edge Function は `raw.githubusercontent.com/.../data/<market>.csv` を中継 (`X-Source: github-snapshot` ヘッダで識別可能)。`.github/workflows/scrape-jepx.yml` が cron `5,35 * * * *` で 30 分おきに JEPX をスクレイプ → `data/*.csv` を自走 commit。
+3. **DEMO** — どちらも失敗 / データ未取得の market は `assets/js/demo.js` の合成データで埋める。
+
+ヘッダの `📦 JEPX X 分前` ピルが LIVE/snapshot 状態を表示する。
+
+## 9 TSO 需給モニタ (denkiyoho)
+
+JEPX が落ちていても画面が「常に LIVE で動く」体験を担保するため、各送配電会社が公開する電力使用実績 CSV を一次 LIVE ソースとして併用する。
+
+- `/api/denkiyoho` — 9 エリア (北海道・東北・東京・中部・北陸・関西・中国・四国・九州) の最新需要を JSON で返す Edge Function。
+- `/api/denkiyoho?probe=1` — 各エリアの URL 試行ログだけを返す診断モード (デプロイ後の動作確認に便利)。
+- 失敗エリアは合成需要曲線 (二山型ピーク) で補完し、cell ごとに `LIVE` / `DEMO` ピルで識別。
+
 ## ローカルで動かす場合
 
 ```bash

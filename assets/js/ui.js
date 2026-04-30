@@ -1,6 +1,6 @@
 // 描画レイヤ。Chart.js + DOM 操作。
 
-import { AREAS, SLOT_LABELS } from './config.js?v=2026.04.30.12';
+import { AREAS, SLOT_LABELS } from './config.js?v=2026.04.30.13';
 
 // ───── ユーティリティ ──────────────────────────────────────────────
 
@@ -475,6 +475,40 @@ export function setStatus({ updatedAt, line, state }) {
 
 export function setRefreshing(on) {
   document.getElementById('refresh-btn').classList.toggle('spinning', on);
+}
+
+// JEPX スナップショット鮮度ピル (ヘッダ): 'live' / 'snapshot' / 'none'
+function fmtAge(sec) {
+  if (sec == null || !Number.isFinite(sec)) return '—';
+  if (sec < 60)    return `${Math.max(0, Math.floor(sec))} 秒前`;
+  if (sec < 3600)  return `${Math.floor(sec / 60)} 分前`;
+  if (sec < 86400) {
+    const h = Math.floor(sec / 3600);
+    const m = Math.floor((sec % 3600) / 60);
+    return m ? `${h}時間${m}分前` : `${h}時間前`;
+  }
+  return `${Math.floor(sec / 86400)} 日前`;
+}
+
+export function setSnapshotInfo(info) {
+  const pill = document.getElementById('snapshot-pill');
+  const text = document.getElementById('snapshot-text');
+  if (!pill || !text) return;
+  if (!info || info.state === 'none') {
+    pill.classList.add('snapshot-pill-hidden');
+    return;
+  }
+  pill.classList.remove('snapshot-pill-hidden', 'snap-live', 'snap-stale');
+  if (info.state === 'live') {
+    pill.classList.add('snap-live');
+    pill.title = 'JEPX 全市場 LIVE 取得中';
+    text.textContent = `JEPX LIVE · ${info.liveCount}/5`;
+  } else {
+    pill.classList.add('snap-stale');
+    const liveTxt = info.liveCount ? ` · LIVE ${info.liveCount}` : '';
+    pill.title = `JEPX スナップショット ${fmtAge(info.ageSec)} (snapshot ${info.snapCount}/5${liveTxt})`;
+    text.textContent = `JEPX ${fmtAge(info.ageSec)}${liveTxt}`;
+  }
 }
 
 // 3-state status badge: 'live' | 'connecting' | 'partial' | 'demo'
