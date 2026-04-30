@@ -1,22 +1,23 @@
 // JEPX Live — エントリーポイント
 
-import { REFRESH_MS, SOURCES, AREAS, fiscalYear } from './config.js?v=2026.04.30.17';
-import { fetchCsv, fetchMarketCsv } from './fetcher.js?v=2026.04.30.17';
-import { parseCsvWithHeader } from './csv.js?v=2026.04.30.17';
-import { parseSpot, parseIntraday, parseForward, parseBaseload, parseFip } from './markets.js?v=2026.04.30.17';
-import { demoSpot, demoIntraday, demoForward, demoBaseload, demoFip } from './demo.js?v=2026.04.30.17';
-import { demoPlant, demoWeather, demoRevenue } from './plant.js?v=2026.04.30.17';
-import { fetchTso, buildSyntheticTso } from './tso.js?v=2026.04.30.17';
-import { fetchWeather, lastCachedWeather } from './weather.js?v=2026.04.30.17';
+import { REFRESH_MS, SOURCES, AREAS, fiscalYear } from './config.js?v=2026.04.30.18';
+import { fetchCsv, fetchMarketCsv } from './fetcher.js?v=2026.04.30.18';
+import { parseCsvWithHeader } from './csv.js?v=2026.04.30.18';
+import { parseSpot, parseIntraday, parseForward, parseBaseload, parseFip } from './markets.js?v=2026.04.30.18';
+import { demoSpot, demoIntraday, demoForward, demoBaseload, demoFip } from './demo.js?v=2026.04.30.18';
+import { demoPlant, demoWeather, demoRevenue } from './plant.js?v=2026.04.30.18';
+import { fetchTso, buildSyntheticTso } from './tso.js?v=2026.04.30.18';
+import { fetchWeather, lastCachedWeather } from './weather.js?v=2026.04.30.18';
+import { fetchNews, lastCachedNews } from './news.js?v=2026.04.30.18';
 import {
   renderKpis, renderSpotChart, renderAreaToggles, renderAreaMini,
   renderProfile, renderIntradayChart, renderForward, renderBaseload,
   renderFip, renderTicker, renderHero, renderPlant, renderWeather,
-  renderRevenue, renderTsoGrid,
+  renderRevenue, renderTsoGrid, renderNews,
   startHeroAnimations,
   setStatus, setRefreshing, setMode, setSnapshotInfo,
   startCountdown, resetCountdown, toggleFullscreen,
-} from './ui.js?v=2026.04.30.17';
+} from './ui.js?v=2026.04.30.18';
 
 // ───── 状態 ─────────────────────────────────────────────────────
 const state = {
@@ -32,6 +33,8 @@ const state = {
   tsoInFlight: null,
   weather: null,        // JMA 由来の天気データ ({ slots, isLive, ... })
   weatherInFlight: null,
+  news: null,           // Google ニュース RSS ({ kansai, zenkoku, updatedAt, ... })
+  newsInFlight: null,
   // /api/jepx?market=X が返してきた X-Source / X-Snapshot-Age-Seconds を per-market で保持
   sources: { spot: null, intraday: null, forward: null, baseload: null, fip: null },
 };
@@ -119,6 +122,8 @@ function render() {
   renderWeather(weatherSlots);
   renderRevenue(demoRevenue(plant, state.spot), plant);
   renderTsoGrid(state.tso || buildSyntheticTso());
+  // ニュースは LIVE 取得前は cache (or 何もしない) を渡す
+  if (state.news || lastCachedNews()) renderNews(state.news || lastCachedNews());
   renderSpotChart(state.spot, { range: state.spotRange, activeAreas: [...state.spotAreas] });
   renderAreaToggles(state.spotAreas, () => render());
   renderAreaMini(state.spot);
@@ -201,6 +206,27 @@ function formatJpDate(iso) {
     const d = new Date(iso);
     return `${d.getMonth() + 1}/${d.getDate()} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
   } catch { return ''; }
+}
+
+async function loadNews() {
+  if (state.newsInFlight) state.newsInFlight.abort();
+  const ctrl = new AbortController();
+  state.newsInFlight = ctrl;
+  try {
+    const r = await fetchNews({ signal: ctrl.signal });
+    if (r.isLive) {
+      state.news = r;
+      renderNews(r);
+      console.log(`%c[NEWS] LIVE · 関西 ${r.kansai.length} / 全国 ${r.zenkoku.length}`,
+        'color:#facc15;font-weight:bold');
+    } else {
+      console.warn('[NEWS] fetch failed:', r.error || 'no items');
+    }
+  } catch (e) {
+    console.warn('[NEWS] fetch threw', e);
+  } finally {
+    state.newsInFlight = null;
+  }
 }
 
 async function loadTso() {
@@ -383,6 +409,10 @@ setInterval(loadTso, 5 * 60 * 1000);
 loadWeather();
 setInterval(loadWeather, 30 * 60 * 1000);
 
+// 3-d) ニュースは 15 分おき (Edge 側のキャッシュ間隔と一致)
+loadNews();
+setInterval(loadNews, 15 * 60 * 1000);
+
 // 4) 奈良吉野太陽光発電所 (DEMO) は 5 秒ごとに再生成して常に値が動くように
 setInterval(() => {
   try {
@@ -406,5 +436,6 @@ document.addEventListener('visibilitychange', () => {
     loadAll();
     loadTso();
     loadWeather();
+    loadNews();
   }
 });
