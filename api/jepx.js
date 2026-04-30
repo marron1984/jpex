@@ -1,22 +1,16 @@
-// Vercel Edge Function — JEPX CSV プロキシ + 自動 URL 探索
+// Vercel Edge Function — JEPX CSV プロキシ + 自動 URL 探索 + 構造化エラー
 //
-// 2 モード:
-//   /api/jepx?market=spot   ─ 5 市場のいずれかを指定。サーバ側が候補 URL を順次
-//                              探索し、最初に 200 を返した CSV をそのまま中継する
-//   /api/jepx?url=<JEPX>    ─ 旧モード (URL を明示的に指定)
-//
-// JEPX のドメイン (jepx.jp / jepx.org) 以外の URL は弾く。
-// レスポンスヘッダ X-Source-Url に実際に取得できた URL を入れて、フロント側で
-// 確認できるようにする。
+// モード:
+//   /api/jepx?market=spot           市場別の CSV (バイナリ中継)
+//   /api/jepx?market=spot&probe=1   その市場の試行ログのみ JSON (CSV は返さない)
+//   /api/jepx?diag=1                全 5 市場の試行結果を 1 つの JSON で
+//   /api/jepx?url=<jepx-url>        URL を明示指定して中継
 
 export const config = { runtime: 'edge' };
 
 const ALLOWED = /^https?:\/\/(www\.)?jepx\.(jp|org)\//i;
 
-// 候補 URL 雛形。{YEAR} は西暦4桁、{FY} は会計年度 (4-3月)。
-// 上から順に試行するので、最も最新で確実なパターンを上に置く。
-// JEPX 公式の市場データページ。固定 URL 候補で取れなかった時に、
-// このページの HTML から CSV リンクを抽出して再試行する。
+// 公式の市場データページ — 固定 URL で取れなかった時にスクレイプする対象
 const MARKET_PAGES = {
   spot:     'https://www.jepx.jp/electricpower/market-data/spot/',
   intraday: 'https://www.jepx.jp/electricpower/market-data/intraday/',
@@ -26,43 +20,65 @@ const MARKET_PAGES = {
 };
 
 // HTML 中の CSV リンクを引っ張り出す正規表現
-const CSV_HREF_RE = /(?:href|src|data-href|data-url|url)\s*=\s*["']([^"']+\.csv[^"']*)["']/gi;
-const CSV_BARE_RE = /https?:\/\/(?:www\.)?jepx\.(?:jp|org)\/[^\s"'<>]+\.csv/gi;
+const CSV_HREF_RE = /(?:href|src|data-href|data-url|data-file|url)\s*=\s*["']([^"']+\.csv[^"']*)["']/gi;
+const CSV_BARE_RE = /https?:\/\/(?:www\.)?jepx\.(?:jp|org)\/[^\s"'<>)\]]+\.csv/gi;
+// JS リテラル中の "filename.csv" パターン (data attr, JSON config 等)
+const CSV_LITERAL_RE = /["']([^"'<>]*?\/[^"'<>\/]+\.csv)["']/gi;
 
+// 候補 URL 雛形 (上から順、ヒットしたら採用)
 const URL_PATTERNS = {
   spot: [
     'https://www.jepx.jp/market/excel/spot_{YEAR}.csv',
     'https://www.jepx.jp/market/excel/spot_{YEAR_PREV}.csv',
+    'https://www.jepx.jp/market/excel/spot_summary_{YEAR}.csv',
+    'https://www.jepx.jp/market/excel/spot_summary_{YEAR_PREV}.csv',
     'https://www.jepx.jp/js/csv/spot_summary_{YEAR}.csv',
+    'https://www.jepx.jp/js/csv/spot_summary_{YEAR_PREV}.csv',
+    'https://www.jepx.jp/js/csv/spot_{YEAR}.csv',
+    'https://www.jepx.jp/js/csv/spot_{YEAR_PREV}.csv',
     'http://www.jepx.org/market/excel/spot_{YEAR}.csv',
+    'http://www.jepx.org/market/excel/spot_{YEAR_PREV}.csv',
   ],
   intraday: [
     'https://www.jepx.jp/market/excel/im_{YEAR}.csv',
-    'https://www.jepx.jp/market/excel/intraday_{YEAR}.csv',
-    'https://www.jepx.jp/market/excel/im_trade_summary_{YEAR}.csv',
     'https://www.jepx.jp/market/excel/im_{YEAR_PREV}.csv',
+    'https://www.jepx.jp/market/excel/intraday_{YEAR}.csv',
+    'https://www.jepx.jp/market/excel/intraday_{YEAR_PREV}.csv',
+    'https://www.jepx.jp/market/excel/im_trade_summary_{YEAR}.csv',
+    'https://www.jepx.jp/market/excel/im_trade_summary_{YEAR_PREV}.csv',
     'https://www.jepx.jp/js/csv/im_trade_summary_{YEAR}.csv',
+    'https://www.jepx.jp/js/csv/im_trade_summary_{YEAR_PREV}.csv',
+    'https://www.jepx.jp/js/csv/im_{YEAR}.csv',
   ],
   forward: [
     'https://www.jepx.jp/market/excel/forward_{FY}.csv',
     'https://www.jepx.jp/market/excel/forward_{FY_PREV}.csv',
     'https://www.jepx.jp/market/excel/forward_{YEAR}.csv',
+    'https://www.jepx.jp/market/excel/forward_{YEAR_PREV}.csv',
     'https://www.jepx.jp/market/excel/forward_summary_{FY}.csv',
+    'https://www.jepx.jp/market/excel/forward_summary_{FY_PREV}.csv',
     'https://www.jepx.jp/js/csv/forward_summary_{FY}.csv',
+    'https://www.jepx.jp/js/csv/forward_summary_{FY_PREV}.csv',
   ],
   baseload: [
     'https://www.jepx.jp/market/excel/baseload_{FY}.csv',
     'https://www.jepx.jp/market/excel/baseload_{FY_PREV}.csv',
     'https://www.jepx.jp/market/excel/baseload_summary_{FY}.csv',
+    'https://www.jepx.jp/market/excel/baseload_summary_{FY_PREV}.csv',
     'https://www.jepx.jp/market/excel/baseload_auction_{FY}.csv',
+    'https://www.jepx.jp/market/excel/baseload_auction_{FY_PREV}.csv',
     'https://www.jepx.jp/js/csv/baseload_{FY}.csv',
+    'https://www.jepx.jp/js/csv/baseload_{FY_PREV}.csv',
   ],
   fip: [
     'https://www.jepx.jp/market/excel/fip_{FY}.csv',
     'https://www.jepx.jp/market/excel/fip_{FY_PREV}.csv',
-    'https://www.jepx.jp/market/excel/fip_reference_{FY}.csv',
     'https://www.jepx.jp/market/excel/fip_{YEAR}.csv',
+    'https://www.jepx.jp/market/excel/fip_{YEAR_PREV}.csv',
+    'https://www.jepx.jp/market/excel/fip_reference_{FY}.csv',
+    'https://www.jepx.jp/market/excel/fip_reference_{FY_PREV}.csv',
     'https://www.jepx.jp/js/csv/fip_summary_{FY}.csv',
+    'https://www.jepx.jp/js/csv/fip_summary_{FY_PREV}.csv',
   ],
 };
 
@@ -83,144 +99,155 @@ function expand(pattern, now = new Date()) {
 }
 
 const FETCH_HEADERS = {
-  // JEPX の WAF が空 UA 等を弾くケースに備えて一般的なブラウザ風 UA を付ける
   'User-Agent': 'Mozilla/5.0 (compatible; DENDENLIVE/1.0; +https://github.com/marron1984/jpex)',
   'Accept': 'text/csv, text/plain, application/octet-stream, */*',
   'Accept-Language': 'ja,en;q=0.8',
 };
 
-async function tryUrl(url) {
+async function tryUrl(url, opts = {}) {
+  const t0 = Date.now();
   try {
     const r = await fetch(url, {
       headers: FETCH_HEADERS,
       redirect: 'follow',
-      // Edge fetch にはタイムアウトが標準でないので AbortController で 8s
+      signal: AbortSignal.timeout(opts.timeoutMs ?? 8000),
+    });
+    const ms = Date.now() - t0;
+    if (!r.ok) return { ok: false, status: r.status, ms };
+    if (opts.headOnly) {
+      return { ok: true, status: r.status, ms, contentType: r.headers.get('content-type') || 'text/csv' };
+    }
+    const buf = await r.arrayBuffer();
+    if (buf.byteLength < 64) return { ok: false, status: 204, reason: 'too small', bytes: buf.byteLength, ms };
+    return { ok: true, status: r.status, buf, contentType: r.headers.get('content-type') || 'text/csv', bytes: buf.byteLength, ms };
+  } catch (e) {
+    return { ok: false, status: 0, reason: e?.message || String(e), ms: Date.now() - t0 };
+  }
+}
+
+async function scrapeMarketLinks(marketKey) {
+  const pageUrl = MARKET_PAGES[marketKey];
+  if (!pageUrl) return { pageUrl: null, links: [], error: 'no page' };
+  try {
+    const r = await fetch(pageUrl, {
+      headers: { ...FETCH_HEADERS, 'Accept': 'text/html,*/*' },
+      redirect: 'follow',
       signal: AbortSignal.timeout(8000),
     });
-    if (!r.ok) return { ok: false, status: r.status };
-    const buf = await r.arrayBuffer();
-    if (buf.byteLength < 64) return { ok: false, status: 204, reason: 'too small' };
-    return { ok: true, buf, contentType: r.headers.get('content-type') || 'text/csv' };
+    if (!r.ok) return { pageUrl, links: [], error: `page status ${r.status}` };
+    const html = await r.text();
+    const set = new Set();
+    let m;
+    CSV_HREF_RE.lastIndex = 0;
+    while ((m = CSV_HREF_RE.exec(html))) set.add(absoluteUrl(m[1], pageUrl));
+    CSV_BARE_RE.lastIndex = 0;
+    while ((m = CSV_BARE_RE.exec(html))) set.add(m[0]);
+    CSV_LITERAL_RE.lastIndex = 0;
+    while ((m = CSV_LITERAL_RE.exec(html))) {
+      const u = absoluteUrl(m[1], pageUrl);
+      if (ALLOWED.test(u)) set.add(u);
+    }
+    return { pageUrl, links: [...set] };
   } catch (e) {
-    return { ok: false, status: 0, reason: e?.message || String(e) };
+    return { pageUrl, links: [], error: e?.message || String(e) };
   }
+}
+
+function rankByYear(urls) {
+  const yr = new Date().getFullYear();
+  return [...urls].sort((a, b) => {
+    const ay = (a.match(/(\d{4})/) || [, 0])[1] | 0;
+    const by = (b.match(/(\d{4})/) || [, 0])[1] | 0;
+    return Math.abs(yr - ay) - Math.abs(yr - by);
+  });
+}
+
+async function probeMarket(marketKey, headOnly = false) {
+  const tried = [];
+
+  // (a) パターン
+  for (const pat of URL_PATTERNS[marketKey] || []) {
+    const u = expand(pat);
+    const r = await tryUrl(u, { headOnly });
+    tried.push({ via: 'pattern', url: u, ok: r.ok, status: r.status, reason: r.reason || null, bytes: r.bytes || 0, ms: r.ms });
+    if (r.ok && !headOnly) return { result: 'ok', url: u, via: 'pattern', buf: r.buf, contentType: r.contentType, tried };
+    if (r.ok && headOnly) return { result: 'ok', url: u, via: 'pattern', tried };
+  }
+
+  // (b) ページスクレイプ
+  const { pageUrl, links, error: scrapeErr } = await scrapeMarketLinks(marketKey);
+  if (scrapeErr) tried.push({ via: 'scrape', url: pageUrl || 'n/a', ok: false, status: 0, reason: scrapeErr });
+
+  for (const u of rankByYear(links).slice(0, 10)) {
+    if (!ALLOWED.test(u)) continue;
+    const r = await tryUrl(u, { headOnly });
+    tried.push({ via: 'scrape', url: u, ok: r.ok, status: r.status, reason: r.reason || null, bytes: r.bytes || 0, ms: r.ms });
+    if (r.ok && !headOnly) return { result: 'ok', url: u, via: 'scrape', buf: r.buf, contentType: r.contentType, tried };
+    if (r.ok && headOnly) return { result: 'ok', url: u, via: 'scrape', tried };
+  }
+
+  return { result: 'fail', tried, scrapedLinks: links };
 }
 
 export default async function handler(req) {
   const reqUrl = new URL(req.url);
   const market = reqUrl.searchParams.get('market');
+  const probe  = reqUrl.searchParams.get('probe');
+  const diag   = reqUrl.searchParams.get('diag');
   const explicitUrl = reqUrl.searchParams.get('url');
-  const diag = reqUrl.searchParams.get('diag');
 
-  // ─── ?diag=1 モード: 全 5 市場を試行して JSON で結果を返す ──
+  // ─── ?diag=1: 全市場を probe ──────────────────────────────
   if (diag) {
-    const out = {};
     const markets = Object.keys(URL_PATTERNS);
-    await Promise.all(markets.map(async (m) => {
-      const results = [];
-      for (const pat of URL_PATTERNS[m]) {
-        const u = expand(pat);
-        const r = await tryUrl(u);
-        results.push({ url: u, ok: r.ok, status: r.status, reason: r.reason || null, bytes: r.ok ? r.buf.byteLength : 0 });
-        if (r.ok) break;
-      }
-      // ページスクレイプも試す
-      const pageUrl = MARKET_PAGES[m];
-      const scrapedLinks = [];
-      if (pageUrl && !results.some(r => r.ok)) {
-        try {
-          const pageRes = await fetch(pageUrl, { headers: FETCH_HEADERS, signal: AbortSignal.timeout(8000) });
-          if (pageRes.ok) {
-            const html = await pageRes.text();
-            const set = new Set();
-            let mm;
-            CSV_HREF_RE.lastIndex = 0;
-            while ((mm = CSV_HREF_RE.exec(html))) set.add(absoluteUrl(mm[1], pageUrl));
-            CSV_BARE_RE.lastIndex = 0;
-            while ((mm = CSV_BARE_RE.exec(html))) set.add(mm[0]);
-            scrapedLinks.push(...set);
-          } else {
-            scrapedLinks.push(`PAGE STATUS: ${pageRes.status}`);
-          }
-        } catch (e) {
-          scrapedLinks.push(`PAGE ERROR: ${e.message}`);
-        }
-      }
-      out[m] = { tried: results, scrapedLinks };
+    const results = await Promise.all(markets.map(async (m) => {
+      const out = await probeMarket(m, true);  // headOnly=true で軽量
+      return [m, { result: out.result, url: out.url || null, via: out.via || null, tried: out.tried, scrapedLinks: out.scrapedLinks?.slice(0, 20) || [] }];
     }));
-    return new Response(JSON.stringify({ now: new Date().toISOString(), markets: out }, null, 2), {
-      headers: { 'Content-Type': 'application/json; charset=utf-8', 'Access-Control-Allow-Origin': '*', 'Cache-Control': 'no-store' },
-    });
+    const obj = Object.fromEntries(results);
+    return jsonResponse({ now: new Date().toISOString(), markets: obj });
   }
 
-  // ─── ?market=… モード: 候補 URL → ページスクレイプの順で探索 ───
+  // ─── ?probe=1&market=X: 単一市場を probe ──────────────────
+  if (probe && market && URL_PATTERNS[market]) {
+    const out = await probeMarket(market, true);
+    return jsonResponse({ market, ...out, scrapedLinks: out.scrapedLinks?.slice(0, 20) });
+  }
+
+  // ─── ?market=X: 中継 ──────────────────────────────────────
   if (market && URL_PATTERNS[market]) {
-    const tried = [];
-
-    // (a) 固定パターン
-    for (const pat of URL_PATTERNS[market]) {
-      const u = expand(pat);
-      const res = await tryUrl(u);
-      tried.push(`pattern ${u} → ${res.ok ? 'OK' : (res.status + (res.reason ? ` ${res.reason}` : ''))}`);
-      if (res.ok) return csvResponse(res, u, tried.length, 'pattern');
+    const out = await probeMarket(market, false);
+    if (out.result === 'ok') {
+      return new Response(out.buf, {
+        status: 200,
+        headers: {
+          'Content-Type': out.contentType,
+          'Cache-Control': 'public, s-maxage=300, stale-while-revalidate=60',
+          'Access-Control-Allow-Origin': '*',
+          'Access-Control-Expose-Headers': 'X-Source-Url, X-Via, X-Tried',
+          'X-Source-Url': out.url,
+          'X-Via': out.via,
+          'X-Tried': String(out.tried.length),
+        },
+      });
     }
-
-    // (b) JEPX のページ HTML から CSV リンクを抽出して試行
-    const pageUrl = MARKET_PAGES[market];
-    if (pageUrl) {
-      try {
-        const pageRes = await fetch(pageUrl, {
-          headers: FETCH_HEADERS, redirect: 'follow',
-          signal: AbortSignal.timeout(10000),
-        });
-        if (pageRes.ok) {
-          const html = await pageRes.text();
-          const hrefs = new Set();
-          let m;
-          CSV_HREF_RE.lastIndex = 0;
-          while ((m = CSV_HREF_RE.exec(html))) hrefs.add(absoluteUrl(m[1], pageUrl));
-          CSV_BARE_RE.lastIndex = 0;
-          while ((m = CSV_BARE_RE.exec(html))) hrefs.add(m[0]);
-
-          // 同年のものを優先するように並べ替え
-          const yr = new Date().getFullYear();
-          const sorted = [...hrefs].sort((a, b) => {
-            const ay = (a.match(/(\d{4})/) || [, 0])[1] | 0;
-            const by = (b.match(/(\d{4})/) || [, 0])[1] | 0;
-            return Math.abs(yr - ay) - Math.abs(yr - by);
-          });
-
-          for (const u of sorted.slice(0, 8)) {
-            if (!ALLOWED.test(u)) continue;
-            const res = await tryUrl(u);
-            tried.push(`scrape  ${u} → ${res.ok ? 'OK' : (res.status + (res.reason ? ` ${res.reason}` : ''))}`);
-            if (res.ok) return csvResponse(res, u, tried.length, 'scrape');
-          }
-          if (sorted.length === 0) tried.push(`scrape  ${pageUrl} → no .csv links found`);
-        } else {
-          tried.push(`scrape  ${pageUrl} → page status ${pageRes.status}`);
-        }
-      } catch (e) {
-        tried.push(`scrape  ${pageUrl} → ${e.message || e}`);
-      }
-    }
-
-    return text(`No working URL for market=${market}\n\nTried:\n${tried.join('\n')}`, 502);
+    // 失敗時は構造化 JSON を返す (フロントが診断パネルに使う)
+    return jsonResponse({
+      error: 'no working URL',
+      market,
+      tried: out.tried,
+      scrapedLinks: (out.scrapedLinks || []).slice(0, 20),
+    }, 502);
   }
 
-  // ─── ?url=… モード: URL 直接指定 ──────────────────────────
+  // ─── ?url=X: 直接 URL 指定 ────────────────────────────────
   if (explicitUrl) {
-    if (!ALLOWED.test(explicitUrl)) {
-      return text('Only jepx.jp / jepx.org URLs are allowed', 400);
-    }
-    const res = await tryUrl(explicitUrl);
-    if (!res.ok) {
-      return text(`Upstream failed: ${res.status}${res.reason ? ' ' + res.reason : ''}`, res.status || 502);
-    }
-    return new Response(res.buf, {
+    if (!ALLOWED.test(explicitUrl)) return jsonResponse({ error: 'only jepx.jp / jepx.org URLs are allowed' }, 400);
+    const r = await tryUrl(explicitUrl);
+    if (!r.ok) return jsonResponse({ error: 'upstream failed', status: r.status, reason: r.reason }, r.status || 502);
+    return new Response(r.buf, {
       status: 200,
       headers: {
-        'Content-Type': res.contentType,
+        'Content-Type': r.contentType,
         'Cache-Control': 'public, s-maxage=300, stale-while-revalidate=60',
         'Access-Control-Allow-Origin': '*',
         'Access-Control-Expose-Headers': 'X-Source-Url',
@@ -229,45 +256,28 @@ export default async function handler(req) {
     });
   }
 
-  // ─── 使い方 ────────────────────────────────────────────
-  return text(
-    `DENDENLIVE JEPX proxy
-
-Usage:
-  /api/jepx?market=spot       (also: intraday, forward, baseload, fip)
-  /api/jepx?url=https://www.jepx.jp/market/excel/spot_2026.csv
-`, 200);
+  return jsonResponse({
+    name: 'DENDENLIVE JEPX proxy',
+    usage: {
+      'market data':  '/api/jepx?market=spot|intraday|forward|baseload|fip',
+      'single probe': '/api/jepx?market=spot&probe=1',
+      'all probe':    '/api/jepx?diag=1',
+      'explicit url': '/api/jepx?url=https://www.jepx.jp/market/excel/spot_2026.csv',
+    },
+  });
 }
 
-function csvResponse(res, url, triedCount, via) {
-  return new Response(res.buf, {
-    status: 200,
+function jsonResponse(obj, status = 200) {
+  return new Response(JSON.stringify(obj, null, 2), {
+    status,
     headers: {
-      'Content-Type': res.contentType,
-      'Cache-Control': 'public, s-maxage=300, stale-while-revalidate=60',
+      'Content-Type': 'application/json; charset=utf-8',
       'Access-Control-Allow-Origin': '*',
-      'Access-Control-Expose-Headers': 'X-Source-Url, X-Tried, X-Via',
-      'X-Source-Url': url,
-      'X-Tried': String(triedCount),
-      'X-Via': via,
+      'Cache-Control': 'no-store',
     },
   });
 }
 
 function absoluteUrl(href, base) {
-  try {
-    return new URL(href, base).href;
-  } catch {
-    return href;
-  }
-}
-
-function text(s, status = 200) {
-  return new Response(s, {
-    status,
-    headers: {
-      'Content-Type': 'text/plain; charset=utf-8',
-      'Access-Control-Allow-Origin': '*',
-    },
-  });
+  try { return new URL(href, base).href; } catch { return href; }
 }

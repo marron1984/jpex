@@ -6,17 +6,11 @@
 
 export const REFRESH_MS = 60 * 1000; // 1 分 (Vercel Edge Function が 5 分キャッシュするので JEPX への実 fetch は最大 1/5)
 
-// CORS 直接 fetch がブロックされた場合に経由するプロキシリスト。
-// 順番に試行する。
-//   1) `/api/jepx?url=...`  ─ Vercel Edge Function (本リポジトリ同梱、推奨)
-//   2) 直 fetch              ─ JEPX が CORS を返した時用 (普通は失敗)
-//   3) corsproxy.io          ─ パブリックフォールバック
-//   4) allorigins.win        ─ 第二フォールバック
+// 公開 CORS プロキシは JEPX を 403 で弾くので、フォールバックは Edge Function のみ。
+// `/api/jepx?market=…` に一本化する設計に変更したため、こちらはほぼ未使用。
+// 互換性のため残しているが loadOne では使わない。
 export const CORS_PROXIES = [
   (url) => `/api/jepx?url=${encodeURIComponent(url)}`,
-  (url) => url,
-  (url) => `https://corsproxy.io/?${encodeURIComponent(url)}`,
-  (url) => `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
 ];
 
 // 各市場の CSV 候補 URL。先頭から試して取れたものを使う。

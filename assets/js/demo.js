@@ -1,7 +1,7 @@
 // JEPX CSV が取得できない場合に表示する合成 (デモ) データ。
 // 実データに近い形・スケールで生成し、UI 側は「DEMO」バッジで明示する。
 
-import { fiscalYear } from './config.js?v=2026.04.30.8';
+import { fiscalYear } from './config.js?v=2026.04.30.9';
 
 function ymd(d) {
   return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;

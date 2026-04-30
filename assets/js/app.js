@@ -1,19 +1,20 @@
 // JEPX Live — エントリーポイント
 
-import { REFRESH_MS, SOURCES, AREAS, fiscalYear } from './config.js?v=2026.04.30.8';
-import { fetchCsv, fetchMarketCsv } from './fetcher.js?v=2026.04.30.8';
-import { parseCsvWithHeader } from './csv.js?v=2026.04.30.8';
-import { parseSpot, parseIntraday, parseForward, parseBaseload, parseFip } from './markets.js?v=2026.04.30.8';
-import { demoSpot, demoIntraday, demoForward, demoBaseload, demoFip } from './demo.js?v=2026.04.30.8';
-import { demoPlant, demoWeather } from './plant.js?v=2026.04.30.8';
+import { REFRESH_MS, SOURCES, AREAS, fiscalYear } from './config.js?v=2026.04.30.9';
+import { fetchCsv, fetchMarketCsv } from './fetcher.js?v=2026.04.30.9';
+import { parseCsvWithHeader } from './csv.js?v=2026.04.30.9';
+import { parseSpot, parseIntraday, parseForward, parseBaseload, parseFip } from './markets.js?v=2026.04.30.9';
+import { demoSpot, demoIntraday, demoForward, demoBaseload, demoFip } from './demo.js?v=2026.04.30.9';
+import { demoPlant, demoWeather } from './plant.js?v=2026.04.30.9';
 import {
   renderKpis, renderSpotChart, renderAreaToggles, renderAreaMini,
   renderProfile, renderIntradayChart, renderForward, renderBaseload,
   renderFip, renderTicker, renderHero, renderPlant, renderWeather,
+  renderDiagnostics, showDiagnostics,
   startHeroAnimations,
   setStatus, setRefreshing, setMode,
   startCountdown, resetCountdown, toggleFullscreen,
-} from './ui.js?v=2026.04.30.8';
+} from './ui.js?v=2026.04.30.9';
 
 // ───── 状態 ─────────────────────────────────────────────────────
 const state = {
@@ -23,6 +24,7 @@ const state = {
   spotRange: 'today',
   spotAreas: new Set(['system', 'kansai']),
   errors: {},
+  tried: { spot: null, intraday: null, forward: null, baseload: null, fip: null },
   inFlight: null,
 };
 
@@ -118,42 +120,28 @@ function render() {
 // ───── データ取得 ───────────────────────────────────────────────
 
 async function loadOne(key, parser, signal) {
-  const cfg = SOURCES[key];
-  const errors = [];
-
-  // 1) Edge Function (/api/jepx?market=<key>) — server-side で URL 自動探索
+  // /api/jepx?market=<key> 一本。公開 CORS プロキシは JEPX に 403 されるので使わない。
   try {
     const r = await fetchMarketCsv(key, { signal });
     if (r.text) {
       const data = parser(parseCsvWithHeader(r.text));
-      if (!data.length) throw new Error('CSV parse 0 件');
+      if (!data.length) throw new Error('CSV parse 0 件 (列レイアウト変更?)');
       state[key] = data;
       state.isDemo[key] = false;
       state.errors[key] = null;
+      state.tried[key] = null;
       return { key, ok: true, count: data.length, sourceUrl: r.sourceUrl, via: 'edge' };
     }
-    if (r.errors) errors.push(...r.errors);
-  } catch (e) {
-    errors.push(`edge: ${e.message}`);
-  }
-
-  // 2) URL 候補リスト (公開 CORS プロキシ経由)
-  try {
-    const urls = expand(cfg.urls);
-    const { text, sourceUrl } = await fetchCsv(urls, { signal });
-    const data = parser(parseCsvWithHeader(text));
-    if (!data.length) throw new Error('CSV parse 0 件');
-    state[key] = data;
-    state.isDemo[key] = false;
-    state.errors[key] = null;
-    return { key, ok: true, count: data.length, sourceUrl, via: 'fallback' };
-  } catch (e) {
-    errors.push(`fallback: ${e.message}`);
-    if (e.detail) errors.push(...e.detail);
-    const err = new Error('全経路で取得失敗');
-    err.detail = errors;
+    const err = new Error(r.errors?.join(' / ') || 'no data');
+    err.detail = r.errors || [];
+    err.tried = r.tried || null;
     state.errors[key] = err;
+    state.tried[key] = r.tried || null;
     return { key, ok: false, error: err };
+  } catch (e) {
+    state.errors[key] = e;
+    state.tried[key] = null;
+    return { key, ok: false, error: e };
   }
 }
 
@@ -211,6 +199,22 @@ async function loadAll() {
   setStatus({ updatedAt: Date.now(), line, state: mode === 'live' ? 'live' : mode === 'partial' ? 'stale' : 'error' });
   resetCountdown(REFRESH_MS);
 
+  // 診断パネル: LIVE 以外のときだけ表示
+  if (mode === 'live') {
+    showDiagnostics(false);
+  } else {
+    showDiagnostics(true);
+    const diagRows = results.map(r => ({
+      key: r.key,
+      ok: r.ok,
+      count: r.count,
+      via: r.via,
+      sourceUrl: r.sourceUrl,
+      tried: r.error?.tried || state.tried[r.key] || [],
+    }));
+    renderDiagnostics({ results: diagRows, modeMeta: meta });
+  }
+
   // デバッグ用にエラー内容を console に
   for (const r of ok) {
     console.log(`%c[JEPX:${r.key}] OK%c ${r.count}件 via ${r.via} %c${r.sourceUrl || ''}`,
@@ -242,6 +246,7 @@ function isFileProtocol() {
 
 document.getElementById('refresh-btn').addEventListener('click', () => loadAll());
 document.getElementById('fullscreen-btn').addEventListener('click', () => toggleFullscreen());
+document.getElementById('diag-refresh')?.addEventListener('click', () => loadAll());
 
 // キーボードショートカット: F = フルスクリーン, R = 即更新
 window.addEventListener('keydown', (e) => {

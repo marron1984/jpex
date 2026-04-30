@@ -8,7 +8,7 @@
 //   3) 直 fetch                  ─ JEPX が CORS 許可した時用 (普通は失敗)
 //   4) corsproxy.io / allorigins ─ パブリックフォールバック
 
-import { CORS_PROXIES } from './config.js?v=2026.04.30.8';
+import { CORS_PROXIES } from './config.js?v=2026.04.30.9';
 
 async function tryFetch(url, signal) {
   const res = await fetch(url, {
@@ -40,19 +40,30 @@ function decodeBytes(buf) {
   return utf8;
 }
 
-// market モード: /api/jepx?market=<key> を最優先で試行
+// market モード: /api/jepx?market=<key> 一本に絞る。
+// 失敗時は probe で得た tried 配列を errors に詰めて呼び出し元に返す (診断パネル用)。
 export async function fetchMarketCsv(marketKey, { signal } = {}) {
-  const errors = [];
-
-  // 1) /api/jepx?market=<key> (Edge 自動探索)
+  const url = `/api/jepx?market=${encodeURIComponent(marketKey)}`;
   try {
-    const r = await tryFetch(`/api/jepx?market=${encodeURIComponent(marketKey)}`, signal);
-    if (r.text && r.text.length > 50) return { text: r.text, sourceUrl: r.sourceUrl || `/api/jepx?market=${marketKey}` };
+    const r = await tryFetch(url, signal);
+    if (r.text && r.text.length > 50) {
+      return { text: r.text, sourceUrl: r.sourceUrl || url };
+    }
+    return { errors: [`empty response from ${url}`] };
   } catch (e) {
-    errors.push(`/api/jepx?market=${marketKey}: ${e.message}`);
+    // Edge が JSON エラーを返した場合は parse して構造化情報を返す
+    let detail = e.message;
+    let tried = null;
+    try {
+      const m = e.message.match(/HTTP (\d+): ({.*})$/s);
+      if (m) {
+        const obj = JSON.parse(m[2]);
+        if (obj.tried) tried = obj.tried;
+        if (obj.error) detail = `${obj.error} (HTTP ${m[1]})`;
+      }
+    } catch {}
+    return { errors: [`${url}: ${detail}`], tried };
   }
-
-  return { errors };
 }
 
 // URL モード: 候補 URL リストを各 CORS プロキシで順に試す (フォールバック)

@@ -1,7 +1,7 @@
 // 奈良吉野太陽光発電所 (DEMO) — 仮想 2.0MW 太陽光発電所のデモデータ生成。
 // 出力プロファイル + 天気予報 (30分刻み 48コマ = 24時間) を返す。
 
-import { fiscalYear } from './config.js?v=2026.04.30.8';
+import { fiscalYear } from './config.js?v=2026.04.30.9';
 
 const PLANT = {
   name: '奈良吉野太陽光発電所',
