@@ -3,23 +3,44 @@
 日本卸電力取引所 (JEPX) の **5市場** をリアルタイム表示するダッシュボード。
 スポット・時間前・先渡・ベースロード・FIP の主要指標をひと目で。
 
-![10分自動更新](https://img.shields.io/badge/refresh-10min-22d3ee) ![static](https://img.shields.io/badge/build-static-0ea5b7) ![pages](https://img.shields.io/badge/deploy-GitHub_Pages-7df9ff) ![license](https://img.shields.io/badge/license-MIT-94a3b8)
+![10分自動更新](https://img.shields.io/badge/refresh-10min-22d3ee) ![static](https://img.shields.io/badge/build-static-0ea5b7) ![vercel](https://img.shields.io/badge/deploy-Vercel-000) ![license](https://img.shields.io/badge/license-MIT-94a3b8)
 
-> **🌐 公開 URL** : https://marron1984.github.io/jpex/  *(GitHub Pages, 自動デプロイ)*
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fmarron1984%2Fjpex&project-name=jepx-live&repository-name=jepx-live)
 
-## ウェブで起動 (1度だけ設定)
+## ウェブで起動 — Vercel (推奨)
 
-このリポジトリには **GitHub Pages 自動デプロイ** が含まれています。
-ブランチに push される度に `.github/workflows/pages.yml` が走り、`https://<owner>.github.io/<repo>/` に公開されます。
+このリポジトリは **Vercel** 即デプロイ対応です。ビルドステップなし、設定なし。
 
-初回のみ以下の設定が必要です:
+### A. ボタンから
 
-1. リポジトリの **Settings → Pages** を開く
-2. **Source** に **「GitHub Actions」** を選択
-3. このブランチに何か push する (もしくは Actions タブから手動実行)
+上の **Deploy with Vercel** ボタンを押すだけ。Vercel が repo を fork → ビルドなしで配信開始 → 数十秒で `https://<your-project>.vercel.app` が公開されます。
 
-数十秒後に上記 URL が稼働します。
-以降は **`git push` のたびに自動再デプロイ**。サーバ運用は一切不要です。
+### B. CLI から
+
+```bash
+npm i -g vercel
+vercel deploy --prod
+```
+
+### C. GitHub Integration
+
+[Vercel ダッシュボード](https://vercel.com/new) で `marron1984/jpex` を Import → Deploy。
+以後 **`git push` のたびに自動再デプロイ**、PR ごとに Preview URL も発行されます。
+
+### Vercel ならではの利点
+
+`api/jepx.js` (Edge Function) を同梱しています。Vercel 上では:
+
+- ブラウザは **同一オリジンの `/api/jepx?url=...`** を経由して JEPX CSV を取得 → CORS 問題ゼロ
+- 5 分間 Edge キャッシュ (`s-maxage=300, stale-while-revalidate=60`) で爆速
+- 外部の公開 CORS プロキシ (`corsproxy.io`, `allorigins.win`) に依存しない (フォールバックとしてのみ残置)
+- `jepx.jp` / `jepx.org` 以外の URL は弾くオープンプロキシ対策付き
+
+## 別ホスト (GitHub Pages, Netlify, S3 …)
+
+`/api/jepx` は Vercel 専用 (Edge Functions) なので使えませんが、`config.js` のフォールバックチェーン (公開 CORS プロキシ) が自動で次の手段を試すので **静的ファイルだけでも動作** します。
+
+GitHub Pages 用のワークフローも `.github/workflows/pages.yml` に同梱済 (`Settings → Pages → Source: GitHub Actions` を選択するだけ)。
 
 ## 表示内容
 
@@ -73,15 +94,20 @@ CORS プロキシを経由するため初回ロードに数秒かかる場合が
 ```
 .
 ├── index.html
+├── api/
+│   └── jepx.js             # Vercel Edge Function: JEPX CSV CORS プロキシ
 ├── assets/
 │   ├── css/styles.css
 │   └── js/
 │       ├── app.js          # エントリ・状態管理・スケジューラ
 │       ├── config.js       # URL 雛形・エリア・配色
 │       ├── csv.js          # 軽量 CSV パーサ
+│       ├── demo.js         # 取得失敗時のデモデータ生成
 │       ├── fetcher.js      # CORS フォールバック・SJIS 復号
 │       ├── markets.js      # 各市場 CSV → 構造化データ
 │       └── ui.js           # Chart.js 描画 / DOM
+├── vercel.json             # Vercel 設定 (キャッシュヘッダ等)
+├── .github/workflows/pages.yml  # GitHub Pages 自動デプロイ (任意)
 └── README.md
 ```
 

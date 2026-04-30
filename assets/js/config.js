@@ -6,14 +6,16 @@
 
 export const REFRESH_MS = 10 * 60 * 1000; // 10 分
 
-// CORS 直接 fetch がブロックされた場合に経由するパブリックプロキシ。
-// 順番に試行する。自前ホストする場合は先頭に追加。
+// CORS 直接 fetch がブロックされた場合に経由するプロキシリスト。
+// 順番に試行する。
+//   1) `/api/jepx?url=...`  ─ Vercel Edge Function (本リポジトリ同梱、推奨)
+//   2) 直 fetch              ─ JEPX が CORS を返した時用 (普通は失敗)
+//   3) corsproxy.io          ─ パブリックフォールバック
+//   4) allorigins.win        ─ 第二フォールバック
 export const CORS_PROXIES = [
-  // 直 fetch (CORS が通る場合)
+  (url) => `/api/jepx?url=${encodeURIComponent(url)}`,
   (url) => url,
-  // corsproxy.io
   (url) => `https://corsproxy.io/?${encodeURIComponent(url)}`,
-  // allorigins (raw)
   (url) => `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
 ];
 
