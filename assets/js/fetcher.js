@@ -8,7 +8,7 @@
 //   3) 直 fetch                  ─ JEPX が CORS 許可した時用 (普通は失敗)
 //   4) corsproxy.io / allorigins ─ パブリックフォールバック
 
-import { CORS_PROXIES } from './config.js?v=2026.04.30.11';
+import { CORS_PROXIES } from './config.js?v=2026.04.30.13';
 
 async function tryFetch(url, signal) {
   const res = await fetch(url, {
@@ -22,8 +22,14 @@ async function tryFetch(url, signal) {
     throw new Error(`HTTP ${res.status}${body ? ': ' + body.slice(0, 120) : ''}`);
   }
   const sourceUrl = res.headers.get('x-source-url') || null;
+  // /api/jepx は LIVE 失敗時に github-snapshot へフォールバックする。
+  // X-Source: live | github-snapshot, X-Snapshot-Age-Seconds, X-Snapshot-At を読み取る。
+  const source = res.headers.get('x-source') || (res.headers.get('x-via') === 'github-snapshot' ? 'github-snapshot' : 'live');
+  const ageSecRaw = res.headers.get('x-snapshot-age-seconds');
+  const snapshotAgeSec = ageSecRaw != null ? Number(ageSecRaw) : null;
+  const snapshotAt = res.headers.get('x-snapshot-at') || null;
   const buf = await res.arrayBuffer();
-  return { text: decodeBytes(buf), sourceUrl };
+  return { text: decodeBytes(buf), sourceUrl, source, snapshotAgeSec, snapshotAt };
 }
 
 // JEPX の CSV は Shift_JIS。文字化け検知のため UTF-8 → Shift_JIS の順で試す。
@@ -47,7 +53,13 @@ export async function fetchMarketCsv(marketKey, { signal } = {}) {
   try {
     const r = await tryFetch(url, signal);
     if (r.text && r.text.length > 50) {
-      return { text: r.text, sourceUrl: r.sourceUrl || url };
+      return {
+        text: r.text,
+        sourceUrl: r.sourceUrl || url,
+        source: r.source,                   // 'live' | 'github-snapshot'
+        snapshotAgeSec: r.snapshotAgeSec,
+        snapshotAt: r.snapshotAt,
+      };
     }
     return { errors: [`empty response from ${url}`] };
   } catch (e) {

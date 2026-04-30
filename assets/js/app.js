@@ -1,22 +1,21 @@
 // JEPX Live — エントリーポイント
 
-import { REFRESH_MS, SOURCES, AREAS, fiscalYear } from './config.js?v=2026.04.30.11';
-import { fetchCsv, fetchMarketCsv } from './fetcher.js?v=2026.04.30.11';
-import { parseCsvWithHeader } from './csv.js?v=2026.04.30.11';
-import { parseSpot, parseIntraday, parseForward, parseBaseload, parseFip } from './markets.js?v=2026.04.30.11';
-import { demoSpot, demoIntraday, demoForward, demoBaseload, demoFip } from './demo.js?v=2026.04.30.11';
-import { demoPlant, demoWeather, demoRevenue } from './plant.js?v=2026.04.30.11';
-import { fetchTso, buildSyntheticTso } from './tso.js?v=2026.04.30.11';
+import { REFRESH_MS, SOURCES, AREAS, fiscalYear } from './config.js?v=2026.04.30.13';
+import { fetchCsv, fetchMarketCsv } from './fetcher.js?v=2026.04.30.13';
+import { parseCsvWithHeader } from './csv.js?v=2026.04.30.13';
+import { parseSpot, parseIntraday, parseForward, parseBaseload, parseFip } from './markets.js?v=2026.04.30.13';
+import { demoSpot, demoIntraday, demoForward, demoBaseload, demoFip } from './demo.js?v=2026.04.30.13';
+import { demoPlant, demoWeather, demoRevenue } from './plant.js?v=2026.04.30.13';
+import { fetchTso, buildSyntheticTso } from './tso.js?v=2026.04.30.13';
 import {
   renderKpis, renderSpotChart, renderAreaToggles, renderAreaMini,
   renderProfile, renderIntradayChart, renderForward, renderBaseload,
   renderFip, renderTicker, renderHero, renderPlant, renderWeather,
   renderRevenue, renderTsoGrid,
-  renderDiagnostics, showDiagnostics,
   startHeroAnimations,
-  setStatus, setRefreshing, setMode,
+  setStatus, setRefreshing, setMode, setSnapshotInfo,
   startCountdown, resetCountdown, toggleFullscreen,
-} from './ui.js?v=2026.04.30.11';
+} from './ui.js?v=2026.04.30.13';
 
 // ───── 状態 ─────────────────────────────────────────────────────
 const state = {
@@ -30,6 +29,8 @@ const state = {
   inFlight: null,
   tso: null,            // 9 TSO 需給データ ({ updatedAt, isLive, areas: { tokyo: {...}, ... } })
   tsoInFlight: null,
+  // /api/jepx?market=X が返してきた X-Source / X-Snapshot-Age-Seconds を per-market で保持
+  sources: { spot: null, intraday: null, forward: null, baseload: null, fip: null },
 };
 
 // 候補 URL を年/会計年度で展開
@@ -137,17 +138,25 @@ async function loadOne(key, parser, signal) {
       state.isDemo[key] = false;
       state.errors[key] = null;
       state.tried[key] = null;
-      return { key, ok: true, count: data.length, sourceUrl: r.sourceUrl, via: 'edge' };
+      state.sources[key] = {
+        source: r.source || 'live',         // 'live' | 'github-snapshot'
+        snapshotAgeSec: r.snapshotAgeSec ?? null,
+        snapshotAt: r.snapshotAt || null,
+        sourceUrl: r.sourceUrl || null,
+      };
+      return { key, ok: true, count: data.length, sourceUrl: r.sourceUrl, via: r.source === 'github-snapshot' ? 'snapshot' : 'edge' };
     }
     const err = new Error(r.errors?.join(' / ') || 'no data');
     err.detail = r.errors || [];
     err.tried = r.tried || null;
     state.errors[key] = err;
     state.tried[key] = r.tried || null;
+    state.sources[key] = null;
     return { key, ok: false, error: err };
   } catch (e) {
     state.errors[key] = e;
     state.tried[key] = null;
+    state.sources[key] = null;
     return { key, ok: false, error: e };
   }
 }
@@ -226,21 +235,8 @@ async function loadAll() {
   setStatus({ updatedAt: Date.now(), line, state: mode === 'live' ? 'live' : mode === 'partial' ? 'stale' : 'error' });
   resetCountdown(REFRESH_MS);
 
-  // 診断パネル: LIVE 以外のときだけ表示
-  if (mode === 'live') {
-    showDiagnostics(false);
-  } else {
-    showDiagnostics(true);
-    const diagRows = results.map(r => ({
-      key: r.key,
-      ok: r.ok,
-      count: r.count,
-      via: r.via,
-      sourceUrl: r.sourceUrl,
-      tried: r.error?.tried || state.tried[r.key] || [],
-    }));
-    renderDiagnostics({ results: diagRows, modeMeta: meta });
-  }
+  // スナップショット鮮度をヘッダピルに反映 (LIVE / SNAPSHOT 何分前 / 失敗)
+  setSnapshotInfo(summarizeSnapshotInfo(state.sources));
 
   // デバッグ用にエラー内容を console に
   for (const r of ok) {
@@ -269,11 +265,32 @@ function isFileProtocol() {
   return typeof location !== 'undefined' && location.protocol === 'file:';
 }
 
+// 全市場分の sources を集約してヘッダピル用に整形:
+// - 全部 live      → { state:'live',     ageSec: null }
+// - 一部 snapshot  → { state:'snapshot', ageSec: 最古, liveCount, snapCount }
+// - 全部 fail      → { state:'none' }
+function summarizeSnapshotInfo(sources) {
+  let live = 0, snap = 0, oldestAge = null;
+  for (const k of Object.keys(sources)) {
+    const s = sources[k];
+    if (!s) continue;
+    if (s.source === 'live') live += 1;
+    else if (s.source === 'github-snapshot') {
+      snap += 1;
+      if (s.snapshotAgeSec != null && (oldestAge == null || s.snapshotAgeSec > oldestAge)) {
+        oldestAge = s.snapshotAgeSec;
+      }
+    }
+  }
+  if (live + snap === 0) return { state: 'none' };
+  if (snap === 0) return { state: 'live', liveCount: live, snapCount: 0, ageSec: null };
+  return { state: 'snapshot', liveCount: live, snapCount: snap, ageSec: oldestAge };
+}
+
 // ───── イベント ─────────────────────────────────────────────────
 
 document.getElementById('refresh-btn').addEventListener('click', () => loadAll());
 document.getElementById('fullscreen-btn').addEventListener('click', () => toggleFullscreen());
-document.getElementById('diag-refresh')?.addEventListener('click', () => loadAll());
 
 // キーボードショートカット: F = フルスクリーン, R = 即更新
 window.addEventListener('keydown', (e) => {
