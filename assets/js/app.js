@@ -1,22 +1,21 @@
 // JEPX Live — エントリーポイント
 
-import { REFRESH_MS, SOURCES, AREAS, fiscalYear } from './config.js?v=2026.04.30.11';
-import { fetchCsv, fetchMarketCsv } from './fetcher.js?v=2026.04.30.11';
-import { parseCsvWithHeader } from './csv.js?v=2026.04.30.11';
-import { parseSpot, parseIntraday, parseForward, parseBaseload, parseFip } from './markets.js?v=2026.04.30.11';
-import { demoSpot, demoIntraday, demoForward, demoBaseload, demoFip } from './demo.js?v=2026.04.30.11';
-import { demoPlant, demoWeather, demoRevenue } from './plant.js?v=2026.04.30.11';
-import { fetchTso, buildSyntheticTso } from './tso.js?v=2026.04.30.11';
+import { REFRESH_MS, SOURCES, AREAS, fiscalYear } from './config.js?v=2026.04.30.12';
+import { fetchCsv, fetchMarketCsv } from './fetcher.js?v=2026.04.30.12';
+import { parseCsvWithHeader } from './csv.js?v=2026.04.30.12';
+import { parseSpot, parseIntraday, parseForward, parseBaseload, parseFip } from './markets.js?v=2026.04.30.12';
+import { demoSpot, demoIntraday, demoForward, demoBaseload, demoFip } from './demo.js?v=2026.04.30.12';
+import { demoPlant, demoWeather, demoRevenue } from './plant.js?v=2026.04.30.12';
+import { fetchTso, buildSyntheticTso } from './tso.js?v=2026.04.30.12';
 import {
   renderKpis, renderSpotChart, renderAreaToggles, renderAreaMini,
   renderProfile, renderIntradayChart, renderForward, renderBaseload,
   renderFip, renderTicker, renderHero, renderPlant, renderWeather,
   renderRevenue, renderTsoGrid,
-  renderDiagnostics, showDiagnostics,
   startHeroAnimations,
   setStatus, setRefreshing, setMode,
   startCountdown, resetCountdown, toggleFullscreen,
-} from './ui.js?v=2026.04.30.11';
+} from './ui.js?v=2026.04.30.12';
 
 // ───── 状態 ─────────────────────────────────────────────────────
 const state = {
@@ -226,22 +225,6 @@ async function loadAll() {
   setStatus({ updatedAt: Date.now(), line, state: mode === 'live' ? 'live' : mode === 'partial' ? 'stale' : 'error' });
   resetCountdown(REFRESH_MS);
 
-  // 診断パネル: LIVE 以外のときだけ表示
-  if (mode === 'live') {
-    showDiagnostics(false);
-  } else {
-    showDiagnostics(true);
-    const diagRows = results.map(r => ({
-      key: r.key,
-      ok: r.ok,
-      count: r.count,
-      via: r.via,
-      sourceUrl: r.sourceUrl,
-      tried: r.error?.tried || state.tried[r.key] || [],
-    }));
-    renderDiagnostics({ results: diagRows, modeMeta: meta });
-  }
-
   // デバッグ用にエラー内容を console に
   for (const r of ok) {
     console.log(`%c[JEPX:${r.key}] OK%c ${r.count}件 via ${r.via} %c${r.sourceUrl || ''}`,
@@ -273,7 +256,6 @@ function isFileProtocol() {
 
 document.getElementById('refresh-btn').addEventListener('click', () => loadAll());
 document.getElementById('fullscreen-btn').addEventListener('click', () => toggleFullscreen());
-document.getElementById('diag-refresh')?.addEventListener('click', () => loadAll());
 
 // キーボードショートカット: F = フルスクリーン, R = 即更新
 window.addEventListener('keydown', (e) => {

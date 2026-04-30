@@ -1,6 +1,6 @@
 // 描画レイヤ。Chart.js + DOM 操作。
 
-import { AREAS, SLOT_LABELS } from './config.js?v=2026.04.30.11';
+import { AREAS, SLOT_LABELS } from './config.js?v=2026.04.30.12';
 
 // ───── ユーティリティ ──────────────────────────────────────────────
 
@@ -1073,67 +1073,6 @@ function drawTsoSpark(canvas, mini, color) {
 }
 
 function pad2(n) { return String(n).padStart(2, '0'); }
-
-// ───── Connection Diagnostics ────────────────────────────────
-
-const MARKET_LABEL = {
-  spot: 'スポット', intraday: '時間前', forward: '先渡', baseload: 'ベースロード', fip: 'FIP',
-};
-
-export function showDiagnostics(show) {
-  const panel = document.getElementById('diag-panel');
-  if (!panel) return;
-  panel.classList.toggle('hidden', !show);
-}
-
-export function renderDiagnostics({ results = [], modeMeta = '' } = {}) {
-  const body = document.getElementById('diag-body');
-  const meta = document.getElementById('diag-meta');
-  if (!body) return;
-
-  if (meta) meta.textContent = modeMeta || '—';
-  body.innerHTML = '';
-
-  if (!results.length) {
-    body.innerHTML = '<p class="diag-loading">probing…</p>';
-    return;
-  }
-
-  for (const r of results) {
-    const wrap = el('div', 'diag-row');
-    const tried = r.tried || [];
-    wrap.innerHTML = `
-      <div class="diag-row-head">
-        <span class="name">${MARKET_LABEL[r.key] || r.key}</span>
-        <span class="pill ${r.ok ? 'ok' : 'fail'}">${r.ok ? 'LIVE' : 'FAIL'}</span>
-        <span class="meta">${r.ok ? `${r.count}件 via ${r.via}` : `${tried.length} URL 試行`}</span>
-      </div>
-    `;
-    if (!r.ok && tried.length) {
-      const list = el('div', 'diag-tried');
-      tried.slice(0, 12).forEach(att => {
-        const cls = att.ok ? 's-ok' : (att.status === 0 || att.status >= 500 ? 's-warn' : 's-fail');
-        const row = el('div', `diag-attempt ${cls}`);
-        row.innerHTML = `
-          <span class="via">${att.via || ''}</span>
-          <span class="status">${att.ok ? 'OK' : (att.status || 'ERR')}${att.reason ? ` ${att.reason}` : ''}</span>
-          <span class="url">${att.url || ''}</span>
-          <span class="ms">${att.ms != null ? att.ms + 'ms' : ''}</span>`;
-        list.appendChild(row);
-      });
-      wrap.appendChild(list);
-    }
-    if (r.ok) {
-      const tip = el('div', 'diag-tip', `via <code>${r.via}</code> · <code>${r.sourceUrl || ''}</code>`);
-      wrap.appendChild(tip);
-    }
-    body.appendChild(wrap);
-  }
-
-  const tip = el('div', 'diag-tip',
-    `直接デバッグ: <code>${location.origin}/api/jepx?diag=1</code> を新規タブで開いて JSON を確認できます。`);
-  body.appendChild(tip);
-}
 
 // ───── 天気予報 (30 分予報 / 24h) ────────────────────────────
 

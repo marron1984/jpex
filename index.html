@@ -31,7 +31,7 @@
       },
     };
   </script>
-  <link rel="stylesheet" href="assets/css/styles.css?v=2026.04.30.11" />
+  <link rel="stylesheet" href="assets/css/styles.css?v=2026.04.30.12" />
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
 </head>
 <body class="bg-ink-950 text-slate-100 min-h-screen antialiased">
@@ -154,33 +154,6 @@
               </div>
             </div>
           </div>
-        </div>
-      </section>
-
-      <!-- CONNECTION DIAGNOSTICS (LIVE 時は非表示) -->
-      <section id="diag-panel" class="card diag-card hidden">
-        <div class="diag-head">
-          <div>
-            <h2 class="card-title">
-              接続診断
-              <span class="card-subtitle">JEPX に到達できない理由をここに展開</span>
-            </h2>
-            <p class="card-meta" id="diag-meta">—</p>
-          </div>
-          <div class="diag-actions">
-            <a id="diag-link" class="diag-link" href="/api/jepx?diag=1" target="_blank" rel="noreferrer">
-              JSON で開く ↗
-            </a>
-            <a class="diag-link" href="/api/health" target="_blank" rel="noreferrer">
-              /api/health ↗
-            </a>
-            <button id="diag-refresh" class="diag-link diag-btn">
-              再診断
-            </button>
-          </div>
-        </div>
-        <div class="diag-body" id="diag-body">
-          <p class="diag-loading">probing…</p>
         </div>
       </section>
 
@@ -512,6 +485,6 @@
     </div>
   </main>
 
-  <script type="module" src="assets/js/app.js?v=2026.04.30.11"></script>
+  <script type="module" src="assets/js/app.js?v=2026.04.30.12"></script>
 </body>
 </html>
