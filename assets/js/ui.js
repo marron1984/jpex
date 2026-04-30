@@ -1,6 +1,6 @@
 // 描画レイヤ。Chart.js + DOM 操作。
 
-import { AREAS, SLOT_LABELS } from './config.js?v=2026.04.30.10';
+import { AREAS, SLOT_LABELS } from './config.js?v=2026.04.30.11';
 
 // ───── ユーティリティ ──────────────────────────────────────────────
 
@@ -860,6 +860,219 @@ export function renderRevenue(rev, plant) {
     });
   }
 }
+
+// ───── TSO 需給モニタ (9 エリア) ──────────────────────────────
+
+const tsoNodes = new Map();   // areaKey -> { node, ... }
+const tsoPrev  = new Map();   // areaKey -> { mw, util }
+
+const TSO_AREA_ORDER = ['hokkaido', 'tohoku', 'tokyo', 'chubu', 'hokuriku', 'kansai', 'chugoku', 'shikoku', 'kyushu'];
+const TSO_AREA_COLORS = {
+  hokkaido: '#60a5fa', tohoku: '#a78bfa', tokyo: '#f472b6', chubu: '#fb7185',
+  hokuriku: '#fbbf24', kansai: '#facc15', chugoku: '#4ade80', shikoku: '#22d3ee', kyushu: '#34d399',
+};
+
+function utilToCls(util) {
+  if (util == null) return 'flat';
+  if (util >= 95) return 'critical';
+  if (util >= 90) return 'tight';
+  if (util >= 80) return 'busy';
+  if (util >= 65) return 'normal';
+  return 'easy';
+}
+
+function fmtMw(mw) {
+  if (mw == null || !Number.isFinite(mw)) return '—';
+  if (mw >= 10_000) return (mw / 1000).toFixed(2) + ' GW';
+  return Math.round(mw).toLocaleString('ja-JP') + ' MW';
+}
+
+export function renderTsoGrid(tsoData) {
+  if (!tsoData) return;
+  const grid = document.getElementById('tso-grid');
+  if (!grid) return;
+
+  // Mode pill + totals
+  const pill = document.getElementById('tso-mode-pill');
+  if (pill) {
+    pill.classList.remove('live', 'demo', 'partial');
+    if (tsoData.isLive && tsoData.liveCount === TSO_AREA_ORDER.length) {
+      pill.classList.add('live');
+      pill.querySelector('.text').textContent = `LIVE · 9/9`;
+    } else if (tsoData.isLive) {
+      pill.classList.add('partial');
+      pill.querySelector('.text').textContent = `PARTIAL · ${tsoData.liveCount}/9 LIVE`;
+    } else {
+      pill.classList.add('demo');
+      pill.querySelector('.text').textContent = 'DEMO · 合成データ';
+    }
+  }
+  const meta = document.getElementById('tso-meta');
+  if (meta) {
+    const ts = new Date(tsoData.updatedAt);
+    const tStr = `${pad2(ts.getHours())}:${pad2(ts.getMinutes())}:${pad2(ts.getSeconds())}`;
+    meta.textContent = tsoData.isLive
+      ? `更新 ${tStr} · /api/denkiyoho`
+      : `更新 ${tStr} · /api/denkiyoho 接続できず — 合成データで描画中`;
+  }
+
+  // Totals
+  let totalMw = 0, totalPeak = 0;
+  for (const a of TSO_AREA_ORDER) {
+    const x = tsoData.areas?.[a];
+    if (x?.currentMw != null)      totalMw   += x.currentMw;
+    if (x?.peakForecastMw != null) totalPeak += x.peakForecastMw;
+  }
+  const totalsEl = document.getElementById('tso-totals');
+  if (totalsEl) {
+    const utilTot = totalPeak > 0 ? (totalMw / totalPeak) * 100 : null;
+    totalsEl.textContent = `合計 ${(totalMw / 1000).toFixed(1)} GW · 想定最大 ${(totalPeak / 1000).toFixed(1)} GW · 利用率 ${utilTot != null ? utilTot.toFixed(1) + '%' : '—'}`;
+  }
+
+  // Cards
+  for (const key of TSO_AREA_ORDER) {
+    const info = tsoData.areas?.[key];
+    if (!info) continue;
+    let entry = tsoNodes.get(key);
+    if (!entry) {
+      const node = el('div', 'tso-cell');
+      node.dataset.area = key;
+      node.style.setProperty('--area-color', TSO_AREA_COLORS[key] || '#94a3b8');
+      node.innerHTML = `
+        <div class="tso-head">
+          <span class="name"></span>
+          <span class="live-tag"></span>
+        </div>
+        <div class="tso-mw num">—</div>
+        <div class="tso-meter">
+          <div class="tso-meter-fill"></div>
+          <div class="tso-meter-mark"></div>
+        </div>
+        <div class="tso-stats">
+          <span class="util">利用率 —</span>
+          <span class="delta">—</span>
+        </div>
+        <div class="tso-spark-wrap"><canvas class="tso-spark"></canvas></div>
+        <div class="tso-foot">
+          <span class="peak">想定 — GW</span>
+          <span class="margin">余裕 —%</span>
+        </div>`;
+      grid.appendChild(node);
+      entry = {
+        node,
+        nameEl:   node.querySelector('.name'),
+        liveEl:   node.querySelector('.live-tag'),
+        mwEl:     node.querySelector('.tso-mw'),
+        fillEl:   node.querySelector('.tso-meter-fill'),
+        markEl:   node.querySelector('.tso-meter-mark'),
+        utilEl:   node.querySelector('.util'),
+        deltaEl:  node.querySelector('.delta'),
+        peakEl:   node.querySelector('.peak'),
+        marginEl: node.querySelector('.margin'),
+        sparkEl:  node.querySelector('.tso-spark'),
+      };
+      tsoNodes.set(key, entry);
+    }
+
+    entry.nameEl.textContent = info.label;
+    entry.liveEl.className = 'live-tag ' + (info.isLive ? 'live' : 'demo');
+    entry.liveEl.textContent = info.isLive ? 'LIVE' : 'DEMO';
+
+    // 値カウントアップ
+    const prev = tsoPrev.get(key) || {};
+    if (prev.mw != null && info.currentMw != null && Math.abs(prev.mw - info.currentMw) > 1) {
+      animateValue(entry.mwEl, prev.mw, info.currentMw, fmtMw, 600);
+      entry.node.classList.remove('flash-up', 'flash-down');
+      void entry.node.offsetWidth;
+      entry.node.classList.add(info.currentMw > prev.mw ? 'flash-up' : 'flash-down');
+    } else {
+      entry.mwEl.textContent = fmtMw(info.currentMw);
+    }
+    tsoPrev.set(key, { mw: info.currentMw, util: info.utilizationPct });
+
+    // メーター: 想定最大に対する利用率
+    const utilCls = utilToCls(info.utilizationPct);
+    entry.node.dataset.util = utilCls;
+    const utilPct = Math.max(0, Math.min(100, info.utilizationPct ?? 0));
+    entry.fillEl.style.width = utilPct.toFixed(1) + '%';
+    entry.markEl.style.left  = utilPct.toFixed(1) + '%';
+
+    entry.utilEl.textContent = info.utilizationPct == null ? '利用率 —' :
+      `利用率 ${info.utilizationPct.toFixed(1)}%`;
+
+    // 1h delta
+    const d = info.oneHrDeltaPct;
+    entry.deltaEl.className = 'delta ' + (d == null ? 'flat' : d > 0 ? 'up' : d < 0 ? 'down' : 'flat');
+    entry.deltaEl.textContent = d == null ? '1h —' :
+      `1h ${d > 0 ? '▲' : d < 0 ? '▼' : '—'} ${d > 0 ? '+' : ''}${d.toFixed(1)}%`;
+
+    // peak / margin
+    entry.peakEl.textContent  = `想定 ${info.peakForecastMw != null ? (info.peakForecastMw / 1000).toFixed(2) + ' GW' : '—'}`;
+    entry.marginEl.textContent = info.supplyMarginPct != null ?
+      `余裕 ${info.supplyMarginPct.toFixed(1)}%` : '余裕 —';
+
+    // sparkline
+    drawTsoSpark(entry.sparkEl, info.mini, TSO_AREA_COLORS[key]);
+  }
+}
+
+function drawTsoSpark(canvas, mini, color) {
+  if (!canvas || !Array.isArray(mini) || mini.length < 2) return;
+  const ctx = canvas.getContext('2d');
+  const dpr = window.devicePixelRatio || 1;
+  const rect = canvas.getBoundingClientRect();
+  if (rect.width === 0 || rect.height === 0) return;
+  canvas.width = rect.width * dpr;
+  canvas.height = rect.height * dpr;
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  const w = rect.width, h = rect.height;
+  ctx.clearRect(0, 0, w, h);
+
+  const data = mini.map(p => p.mw).filter(v => v != null);
+  if (data.length < 2) return;
+  const min = Math.min(...data), max = Math.max(...data);
+  const range = Math.max(1, max - min);
+  const step = w / (data.length - 1);
+  const padTop = 4, padBottom = 4;
+  const innerH = h - padTop - padBottom;
+
+  // Fill area
+  const grad = ctx.createLinearGradient(0, padTop, 0, h - padBottom);
+  grad.addColorStop(0, color + '55');
+  grad.addColorStop(1, color + '00');
+  ctx.beginPath();
+  ctx.moveTo(0, h - padBottom);
+  data.forEach((v, i) => {
+    const x = i * step;
+    const y = padTop + (1 - (v - min) / range) * innerH;
+    ctx.lineTo(x, y);
+  });
+  ctx.lineTo((data.length - 1) * step, h - padBottom);
+  ctx.closePath();
+  ctx.fillStyle = grad;
+  ctx.fill();
+
+  // Line
+  ctx.beginPath();
+  data.forEach((v, i) => {
+    const x = i * step;
+    const y = padTop + (1 - (v - min) / range) * innerH;
+    if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+  });
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 1.4;
+  ctx.stroke();
+
+  // Last marker
+  const lx = (data.length - 1) * step;
+  const ly = padTop + (1 - (data[data.length - 1] - min) / range) * innerH;
+  ctx.fillStyle = color;
+  ctx.beginPath();
+  ctx.arc(lx, ly, 2.2, 0, Math.PI * 2);
+  ctx.fill();
+}
+
+function pad2(n) { return String(n).padStart(2, '0'); }
 
 // ───── Connection Diagnostics ────────────────────────────────
 

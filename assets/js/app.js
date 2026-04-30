@@ -1,21 +1,22 @@
 // JEPX Live — エントリーポイント
 
-import { REFRESH_MS, SOURCES, AREAS, fiscalYear } from './config.js?v=2026.04.30.10';
-import { fetchCsv, fetchMarketCsv } from './fetcher.js?v=2026.04.30.10';
-import { parseCsvWithHeader } from './csv.js?v=2026.04.30.10';
-import { parseSpot, parseIntraday, parseForward, parseBaseload, parseFip } from './markets.js?v=2026.04.30.10';
-import { demoSpot, demoIntraday, demoForward, demoBaseload, demoFip } from './demo.js?v=2026.04.30.10';
-import { demoPlant, demoWeather, demoRevenue } from './plant.js?v=2026.04.30.10';
+import { REFRESH_MS, SOURCES, AREAS, fiscalYear } from './config.js?v=2026.04.30.11';
+import { fetchCsv, fetchMarketCsv } from './fetcher.js?v=2026.04.30.11';
+import { parseCsvWithHeader } from './csv.js?v=2026.04.30.11';
+import { parseSpot, parseIntraday, parseForward, parseBaseload, parseFip } from './markets.js?v=2026.04.30.11';
+import { demoSpot, demoIntraday, demoForward, demoBaseload, demoFip } from './demo.js?v=2026.04.30.11';
+import { demoPlant, demoWeather, demoRevenue } from './plant.js?v=2026.04.30.11';
+import { fetchTso, buildSyntheticTso } from './tso.js?v=2026.04.30.11';
 import {
   renderKpis, renderSpotChart, renderAreaToggles, renderAreaMini,
   renderProfile, renderIntradayChart, renderForward, renderBaseload,
   renderFip, renderTicker, renderHero, renderPlant, renderWeather,
-  renderRevenue,
+  renderRevenue, renderTsoGrid,
   renderDiagnostics, showDiagnostics,
   startHeroAnimations,
   setStatus, setRefreshing, setMode,
   startCountdown, resetCountdown, toggleFullscreen,
-} from './ui.js?v=2026.04.30.10';
+} from './ui.js?v=2026.04.30.11';
 
 // ───── 状態 ─────────────────────────────────────────────────────
 const state = {
@@ -27,6 +28,8 @@ const state = {
   errors: {},
   tried: { spot: null, intraday: null, forward: null, baseload: null, fip: null },
   inFlight: null,
+  tso: null,            // 9 TSO 需給データ ({ updatedAt, isLive, areas: { tokyo: {...}, ... } })
+  tsoInFlight: null,
 };
 
 // 候補 URL を年/会計年度で展開
@@ -109,6 +112,7 @@ function render() {
   renderPlant(plant);
   renderWeather(demoWeather());
   renderRevenue(demoRevenue(plant, state.spot), plant);
+  renderTsoGrid(state.tso || buildSyntheticTso());
   renderSpotChart(state.spot, { range: state.spotRange, activeAreas: [...state.spotAreas] });
   renderAreaToggles(state.spotAreas, () => render());
   renderAreaMini(state.spot);
@@ -145,6 +149,26 @@ async function loadOne(key, parser, signal) {
     state.errors[key] = e;
     state.tried[key] = null;
     return { key, ok: false, error: e };
+  }
+}
+
+async function loadTso() {
+  if (state.tsoInFlight) state.tsoInFlight.abort();
+  const ctrl = new AbortController();
+  state.tsoInFlight = ctrl;
+  try {
+    const r = await fetchTso({ signal: ctrl.signal });
+    state.tso = r;
+    renderTsoGrid(r);
+    if (r.isLive) {
+      console.log(`%c[TSO] ${r.liveCount}/9 LIVE`, 'color:#4ade80;font-weight:bold');
+    } else {
+      console.warn('[TSO] all areas synthesised — /api/denkiyoho unreachable', r.error || '');
+    }
+  } catch (e) {
+    console.warn('[TSO] fetch failed', e);
+  } finally {
+    state.tsoInFlight = null;
   }
 }
 
@@ -287,6 +311,10 @@ startHeroAnimations(() => {
 loadAll();
 setInterval(loadAll, REFRESH_MS);
 
+// 3-b) TSO 需給は 5 分おき (denkiyoho の更新粒度)
+loadTso();
+setInterval(loadTso, 5 * 60 * 1000);
+
 // 4) 奈良吉野太陽光発電所 (DEMO) は 5 秒ごとに再生成して常に値が動くように
 setInterval(() => {
   try {
@@ -300,5 +328,8 @@ setInterval(() => { try { renderWeather(demoWeather()); } catch {} }, 60_000);
 
 // タブが復帰した時にも更新
 document.addEventListener('visibilitychange', () => {
-  if (!document.hidden) loadAll();
+  if (!document.hidden) {
+    loadAll();
+    loadTso();
+  }
 });

@@ -1,0 +1,60 @@
+name: Scrape JEPX snapshot
+
+on:
+  schedule:
+    # 毎時 :05 と :35 (毎 30 分) に実行。JEPX の更新粒度に合わせる
+    - cron: '5,35 * * * *'
+  workflow_dispatch: {}
+  push:
+    paths:
+      - 'scripts/scrape-jepx.mjs'
+      - '.github/workflows/scrape-jepx.yml'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: scrape-jepx
+  cancel-in-progress: false
+
+jobs:
+  scrape:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # 自身が push した commit は再実行ループにならないよう
+          # 通常 token で十分 ([skip ci] を commit message に入れる)
+          ref: ${{ github.ref }}
+
+      - name: Setup Node 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Run JEPX scraper
+        run: node scripts/scrape-jepx.mjs
+
+      - name: Show diff
+        run: |
+          echo "── data/ status ──"
+          ls -la data/ || true
+          git -c color.ui=always diff --stat -- data/ || true
+
+      - name: Commit snapshot
+        run: |
+          git config user.name 'jepx-snapshot-bot'
+          git config user.email 'jepx-snapshot-bot@users.noreply.github.com'
+          git add data/
+          if git diff --cached --quiet; then
+            echo "No data changes — skipping commit."
+            exit 0
+          fi
+          STAMP=$(date -u +'%Y-%m-%d %H:%MZ')
+          git commit -m "data: JEPX snapshot ${STAMP} [skip ci]"
+          # ブランチ保護下でも自前 token なら push 可。失敗しても workflow は緑で終わる。
+          git push || {
+            echo "::warning::push failed (likely branch protection)";
+            exit 0;
+          }
