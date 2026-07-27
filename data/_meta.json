@@ -1,19 +1,19 @@
 {
-  "updatedAt": "2026-07-27T18:05:45.449Z",
+  "updatedAt": "2026-07-27T20:05:01.189Z",
   "runner": "github-actions",
   "markets": {
     "spot": {
       "ok": true,
       "url": "https://www.jepx.jp/market/excel/spot_2026.csv",
       "via": "pattern",
-      "bytes": 1473979,
+      "bytes": 1474288,
       "attempts": 1
     },
     "intraday": {
       "ok": true,
       "url": "https://www.jepx.jp/market/excel/im_trade_summary_2026.csv",
       "via": "pattern",
-      "bytes": 304401,
+      "bytes": 304564,
       "attempts": 3
     },
     "forward": {
